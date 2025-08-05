@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Modern travel itinerary manager with Excel/CSV import/export, built with vanilla JavaScript">
     <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Travel Manager">
@@ -22,7 +23,7 @@
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Progressive Web App -->
+    <!-- Progressive Web App Manifest -->
     <link rel="manifest" href="manifest.json">
 
     <!-- Favicon -->
@@ -112,6 +113,38 @@
         .app-content.loaded {
             opacity: 1;
         }
+
+        /* Error state styles */
+        .error-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 3rem;
+            max-width: 500px;
+        }
+
+        .error-button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
     </style>
 </head>
 
@@ -122,7 +155,7 @@
         <div class="loader-logo">🌍</div>
         <h2 class="loader-text">Travel Itinerary Manager</h2>
         <div class="loader-spinner"></div>
-        <p class="loader-progress">Initializing application...</p>
+        <p class="loader-progress">Loading application...</p>
     </div>
 </div>
 
@@ -134,127 +167,124 @@
 <!-- Notification Container -->
 <div id="notificationContainer" class="notification-container"></div>
 
-<!-- Service Worker Registration -->
+<!-- Service Worker Registration with Error Handling -->
 <script>
-    // Register service worker for offline support
+    // Service Worker Registration with proper error handling
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('SW registered: ', registration);
-                })
-                .catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
+        window.addEventListener('load', async () => {
+            try {
+                // Check if sw.js exists before attempting to register
+                const response = await fetch('/sw.js', { method: 'HEAD' });
+                if (response.ok) {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('✅ Service Worker registered successfully:', registration);
+
+                    // Listen for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('🔄 New version available');
+                                    // Could show update notification here
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    console.log('ℹ️ Service Worker not available (sw.js not found)');
+                }
+            } catch (error) {
+                console.warn('⚠️ Service Worker registration failed:', error.message);
+            }
         });
+    } else {
+        console.log('ℹ️ Service Worker not supported in this browser');
     }
 
-    // Remove loader after a maximum of 10 seconds
+    // Remove loader after maximum timeout
     setTimeout(() => {
         const loader = document.getElementById('initialLoader');
         if (loader && !loader.classList.contains('hidden')) {
             loader.classList.add('hidden');
             document.getElementById('appContent').classList.add('loaded');
-            console.warn('Application took longer than expected to load');
+            console.warn('⚠️ Application took longer than expected to load');
         }
-    }, 10000);
+    }, 15000);
+
+    // Global error handler
+    window.addEventListener('error', (event) => {
+        console.error('🚨 Global error:', event.error);
+        showErrorFallback(event.error?.message || 'An unexpected error occurred');
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('🚨 Unhandled promise rejection:', event.reason);
+        showErrorFallback(event.reason?.message || 'An unexpected error occurred');
+    });
+
+    function showErrorFallback(message) {
+        const appContent = document.getElementById('appContent');
+        const loader = document.getElementById('initialLoader');
+
+        if (loader) loader.classList.add('hidden');
+
+        if (appContent && !appContent.innerHTML.trim()) {
+            appContent.innerHTML = `
+                    <div class="error-container">
+                        <div class="error-content">
+                            <h1 style="margin-bottom: 1rem;">❌ Application Error</h1>
+                            <p style="margin-bottom: 2rem; line-height: 1.6;">
+                                ${message}
+                            </p>
+                            <div>
+                                <button class="error-button" onclick="location.reload()">
+                                    🔄 Reload Application
+                                </button>
+                                <button class="error-button" onclick="localStorage.clear(); location.reload()">
+                                    🗑️ Clear Data & Reload
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            appContent.classList.add('loaded');
+        }
+    }
 </script>
 
 <!-- Main Application Script (ES Modules) -->
 <script type="module">
-    // Import and initialize the application
-    import('./js/main.js')
-        .then(module => {
-            console.log('Application module loaded successfully');
+    try {
+        // Dynamic import with error handling
+        const module = await import('./js/main.js');
+        console.log('✅ Application module loaded successfully');
 
-            // Hide loader once app is ready
-            const checkReady = () => {
-                if (window.TravelApp && window.TravelApp.isReady()) {
-                    const loader = document.getElementById('initialLoader');
-                    if (loader) {
-                        loader.classList.add('hidden');
-                        document.getElementById('appContent').classList.add('loaded');
-                    }
-                } else {
-                    setTimeout(checkReady, 100);
+        // Check if app is ready
+        const checkReady = () => {
+            if (window.TravelApp && window.TravelApp.isReady()) {
+                const loader = document.getElementById('initialLoader');
+                if (loader) {
+                    loader.classList.add('hidden');
+                    document.getElementById('appContent').classList.add('loaded');
                 }
-            };
+            } else {
+                setTimeout(checkReady, 100);
+            }
+        };
 
-            setTimeout(checkReady, 500); // Small delay to show loading animation
-        })
-        .catch(error => {
-            console.error('Failed to load application:', error);
+        // Small delay to show loading animation
+        setTimeout(checkReady, 500);
 
-            // Show error message
-            document.body.innerHTML = `
-                    <div style="
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        min-height: 100vh;
-                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        text-align: center;
-                        padding: 2rem;
-                    ">
-                        <div style="
-                            background: rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(10px);
-                            border-radius: 1rem;
-                            padding: 3rem;
-                            max-width: 500px;
-                        ">
-                            <h1 style="margin-bottom: 1rem;">❌ Loading Error</h1>
-                            <p style="margin-bottom: 2rem; line-height: 1.6;">
-                                Failed to load the application. Please check your internet connection and try again.
-                            </p>
-                            <button onclick="location.reload()" style="
-                                background: white;
-                                color: #667eea;
-                                border: none;
-                                padding: 0.75rem 2rem;
-                                border-radius: 0.5rem;
-                                font-weight: 600;
-                                cursor: pointer;
-                            ">
-                                Reload Page
-                            </button>
-                        </div>
-                    </div>
-                `;
-        });
+    } catch (error) {
+        console.error('❌ Failed to load application module:', error);
+        showErrorFallback(`Module loading failed: ${error.message}`);
+    }
 </script>
 
 <!-- Fallback for browsers without ES module support -->
 <script nomodule>
-    document.body.innerHTML = `
-            <div style="
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-                padding: 2rem;
-            ">
-                <div style="
-                    background: rgba(255, 255, 255, 0.1);
-                    backdrop-filter: blur(10px);
-                    border-radius: 1rem;
-                    padding: 3rem;
-                    max-width: 500px;
-                ">
-                    <h1 style="margin-bottom: 1rem;">⚠️ Browser Not Supported</h1>
-                    <p style="margin-bottom: 2rem; line-height: 1.6;">
-                        This application requires a modern browser with ES module support.
-                        Please update your browser or try Chrome, Firefox, or Safari.
-                    </p>
-                </div>
-            </div>
-        `;
+    showErrorFallback('This application requires a modern browser with ES module support. Please update your browser or try Chrome, Firefox, or Safari.');
 </script>
 </body>
 </html>
