@@ -55,6 +55,13 @@ export class Application extends EventManager {
     }
 
     /**
+     * Show initial loading
+     */
+    showInitialLoading() {
+        console.log('Application loading...');
+    }
+
+    /**
      * Initialize application
      */
     async init() {
@@ -62,18 +69,28 @@ export class Application extends EventManager {
             this.isLoading = true;
             this.showInitialLoading();
 
-            // Initialize core services
+            // Initialize core services (without ViewManager)
             await this.initializeServices();
 
-            // Setup UI
+            // Setup UI FIRST
             this.setupUI();
+
+            // Create ViewManager AFTER UI exists
+            this.viewManager = new ViewManager({
+                container: '#viewContainer',
+                defaultView: VIEWS.DASHBOARD
+            });
+
+            // Connect services AFTER ViewManager exists
+            this.connectServices();
+
             this.setupEventListeners();
             this.setupKeyboardShortcuts();
 
             // Load theme preference
             this.loadThemePreference();
 
-            // Initialize views
+            // Initialize views BEFORE loading data
             this.registerViews();
 
             // Load initial data
@@ -108,7 +125,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * Initialize core services
+     * Initialize core services (without ViewManager)
      */
     async initializeServices() {
         // Storage manager
@@ -121,14 +138,7 @@ export class Application extends EventManager {
         this.dataManager = new DataManager();
         await this.dataManager.init();
 
-        // View manager
-        this.viewManager = new ViewManager({
-            container: '#viewContainer',
-            defaultView: VIEWS.DASHBOARD
-        });
-
-        // Connect services
-        this.connectServices();
+        // ViewManager will be created after UI setup
     }
 
     /**
@@ -137,7 +147,9 @@ export class Application extends EventManager {
     connectServices() {
         // Data manager events
         this.dataManager.on(EVENTS.DATA_UPDATED, () => {
-            this.viewManager.updateView();
+            if (this.viewManager) {
+                this.viewManager.updateView();
+            }
             this.updateLastActivity();
         });
 
@@ -154,14 +166,16 @@ export class Application extends EventManager {
         });
 
         // View manager events
-        this.viewManager.on(EVENTS.VIEW_CHANGED, (event) => {
-            this.updateNavigationState(event.to);
-            this.updateLastActivity();
-        });
+        if (this.viewManager) {
+            this.viewManager.on(EVENTS.VIEW_CHANGED, (event) => {
+                this.updateNavigationState(event.to);
+                this.updateLastActivity();
+            });
 
-        this.viewManager.on(EVENTS.VIEW_ERROR, (event) => {
-            notificationService.error(`Failed to load ${event.view} view: ${event.error.message}`);
-        });
+            this.viewManager.on(EVENTS.VIEW_ERROR, (event) => {
+                notificationService.error(`Failed to load ${event.view} view: ${event.error.message}`);
+            });
+        }
     }
 
     /**
@@ -493,6 +507,34 @@ export class Application extends EventManager {
     }
 
     /**
+     * Handle window resize
+     */
+    handleResize() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            this.closeMobileSidebar();
+        }
+    }
+
+    /**
+     * Update last activity timestamp
+     */
+    updateLastActivity() {
+        this.lastActivity = Date.now();
+    }
+
+    /**
+     * Mobile sidebar management
+     */
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+
+        if (sidebar) sidebar.classList.remove('mobile-open');
+        if (overlay) overlay.classList.remove('active');
+    }
+
+    /**
      * Setup keyboard shortcuts
      */
     setupKeyboardShortcuts() {
@@ -553,6 +595,40 @@ export class Application extends EventManager {
                 this.handleEscapeKey();
             }
         });
+    }
+
+    /**
+     * Load theme preference
+     */
+    loadThemePreference() {
+        const savedTheme = localStorage.getItem('travel-app-theme') || this.options.theme;
+        this.setTheme(savedTheme);
+    }
+
+    /**
+     * Set theme
+     */
+    setTheme(theme) {
+        this.currentTheme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+
+        // Update theme icon
+        const themeIcon = document.querySelector('.theme-icon');
+        if (themeIcon) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+
+        // Save theme preference
+        localStorage.setItem('travel-app-theme', theme);
+        notificationService.info(`Switched to ${theme} theme`);
+    }
+
+    /**
+     * Toggle theme
+     */
+    toggleTheme() {
+        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
     }
 
     /**
@@ -918,975 +994,4 @@ export class Application extends EventManager {
 
         const instructions = document.createElement('div');
         instructions.innerHTML = `
-            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-                <h4 style="margin-bottom: 1rem; color: #2d3748;">Need a template?</h4>
-                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-secondary" id="downloadExcelTemplate">
-                        📊 Excel Template
-                    </button>
-                    <button class="btn btn-secondary" id="downloadCSVTemplate">
-                        📄 CSV Template
-                    </button>
-                </div>
-            </div>
-        `;
-
-        content.appendChild(instructions);
-        modal.setContent(content);
-        modal.setFooter([
-            {
-                text: 'Cancel',
-                className: 'btn-secondary',
-                onClick: () => true
-            }
-        ]);
-
-        modal.show().then(() => {
-            // Template download handlers
-            const excelTemplateBtn = modal.modal.querySelector('#downloadExcelTemplate');
-            const csvTemplateBtn = modal.modal.querySelector('#downloadCSVTemplate');
-
-            if (excelTemplateBtn) {
-                excelTemplateBtn.addEventListener('click', () => {
-                    this.fileHandler.downloadTemplate('excel');
-                });
-            }
-
-            if (csvTemplateBtn) {
-                csvTemplateBtn.addEventListener('click', () => {
-                    this.fileHandler.downloadTemplate('csv');
-                });
-            }
-        });
-    }
-
-    /**
-     * Open settings modal
-     */
-    openSettingsModal() {
-        const modal = this.modals.get('settings');
-        if (!modal) return;
-
-        const content = `
-            <div class="settings-content">
-                <div class="setting-group">
-                    <h3>Appearance</h3>
-                    <div class="setting-item">
-                        <label>Theme</label>
-                        <select id="themeSelect">
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <h3>Data & Storage</h3>
-                    <div class="setting-item">
-                        <label>Auto-save</label>
-                        <input type="checkbox" id="autoSaveToggle" ${this.options.autoSave ? 'checked' : ''}>
-                    </div>
-                    <div class="setting-item">
-                        <button class="btn btn-secondary" id="clearDataBtn">
-                            🗑️ Clear All Data
-                        </button>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <h3>Accessibility</h3>
-                    <div class="setting-item">
-                        <label>Keyboard Shortcuts</label>
-                        <input type="checkbox" id="shortcutsToggle" ${this.options.keyboardShortcuts ? 'checked' : ''}>
-                    </div>
-                </div>
-
-                <div class="setting-group">
-                    <h3>About</h3>
-                    <div class="setting-item">
-                        <p>Travel Itinerary Manager v${APP_CONFIG.version}</p>
-                        <p>Built with modern web technologies</p>
-                    </div>
-                </div>
-            </div>
-
-            <style>
-                .settings-content {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2rem;
-                }
-
-                .setting-group h3 {
-                    margin-bottom: 1rem;
-                    color: #2d3748;
-                    border-bottom: 1px solid #e2e8f0;
-                    padding-bottom: 0.5rem;
-                }
-
-                .setting-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 1rem;
-                }
-
-                .setting-item label {
-                    font-weight: 500;
-                    color: #4a5568;
-                }
-
-                .setting-item select,
-                .setting-item input[type="checkbox"] {
-                    margin-left: 1rem;
-                }
-
-                .setting-item p {
-                    margin: 0;
-                    color: #718096;
-                    font-size: 0.875rem;
-                }
-            </style>
-        `;
-
-        modal.setContent(content);
-        modal.setFooter([
-            {
-                text: 'Close',
-                className: 'btn-primary',
-                onClick: () => true
-            }
-        ]);
-
-        modal.show().then(() => {
-            // Settings event handlers
-            const themeSelect = modal.modal.querySelector('#themeSelect');
-            const autoSaveToggle = modal.modal.querySelector('#autoSaveToggle');
-            const shortcutsToggle = modal.modal.querySelector('#shortcutsToggle');
-            const clearDataBtn = modal.modal.querySelector('#clearDataBtn');
-
-            if (themeSelect) {
-                themeSelect.value = this.currentTheme;
-                themeSelect.addEventListener('change', (e) => {
-                    this.setTheme(e.target.value);
-                });
-            }
-
-            if (autoSaveToggle) {
-                autoSaveToggle.addEventListener('change', (e) => {
-                    this.setAutoSave(e.target.checked);
-                });
-            }
-
-            if (shortcutsToggle) {
-                shortcutsToggle.addEventListener('change', (e) => {
-                    this.options.keyboardShortcuts = e.target.checked;
-                    this.saveSettings();
-                });
-            }
-
-            if (clearDataBtn) {
-                clearDataBtn.addEventListener('click', () => {
-                    this.confirmClearData();
-                });
-            }
-        });
-    }
-
-    /**
-     * Export data in specified format
-     * @param {string} format - Export format
-     */
-    exportData(format) {
-        try {
-            const activities = this.dataManager.activities;
-            const timestamp = new Date().toISOString().split('T')[0];
-
-            switch (format) {
-                case 'excel':
-                    const excelBlob = this.fileHandler.exportToExcel(activities);
-                    this.fileHandler.downloadFile(
-                        excelBlob,
-                        `travel_itinerary_${timestamp}.xlsx`,
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    );
-                    break;
-
-                case 'csv':
-                    const csvContent = this.fileHandler.exportToCSV(activities);
-                    this.fileHandler.downloadFile(
-                        csvContent,
-                        `travel_itinerary_${timestamp}.csv`,
-                        'text/csv'
-                    );
-                    break;
-
-                case 'json':
-                    const jsonContent = this.fileHandler.exportToJSON(activities);
-                    this.fileHandler.downloadFile(
-                        jsonContent,
-                        `travel_itinerary_${timestamp}.json`,
-                        'application/json'
-                    );
-                    break;
-
-                default:
-                    throw new Error(`Unsupported export format: ${format}`);
-            }
-
-            notificationService.success(SUCCESS_MESSAGES.DATA_EXPORTED);
-
-        } catch (error) {
-            console.error('Export error:', error);
-            notificationService.error(`Export failed: ${error.message}`);
-        }
-    }
-
-    /**
-     * Handle imported data
-     * @param {object} importResult - Import result
-     */
-    handleImportData(importResult) {
-        try {
-            const { activities, metadata } = importResult;
-
-            if (!activities || activities.length === 0) {
-                notificationService.warning('No valid activities found in the imported file');
-                return;
-            }
-
-            // Show confirmation dialog
-            const confirmMessage = `
-                Import ${activities.length} activities from ${metadata.fileName}?
-                This will add to your existing data.
-            `;
-
-            if (confirm(confirmMessage)) {
-                // Import activities
-                const results = this.dataManager.importActivities(
-                    activities.map(activity => activity.toJSON())
-                );
-
-                if (results.imported > 0) {
-                    notificationService.success(
-                        `Successfully imported ${results.imported} activities!`
-                    );
-
-                    if (results.skipped > 0) {
-                        notificationService.warning(
-                            `${results.skipped} activities were skipped due to validation errors`
-                        );
-                    }
-                } else {
-                    notificationService.warning('No activities were imported');
-                }
-            }
-
-        } catch (error) {
-            console.error('Import error:', error);
-            notificationService.error(`Import failed: ${error.message}`);
-        }
-    }
-
-    /**
-     * Render dashboard view
-     * @returns {string} Dashboard HTML
-     */
-    renderDashboardView() {
-        if (!this.dataManager) return '<div>Loading...</div>';
-
-        const stats = this.dataManager.getStatistics();
-        const costBreakdown = this.dataManager.getCostBreakdown();
-
-        return `
-            <div class="dashboard-content">
-                <!-- Metrics Grid -->
-                <div class="dashboard-grid">
-                    <div class="metric-card">
-                        <div class="metric-icon">🎯</div>
-                        <div class="metric-value">${stats.totalActivities}</div>
-                        <div class="metric-label">Total Activities</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-icon">💰</div>
-                        <div class="metric-value">${Utils.formatCurrency(stats.totalCost)}</div>
-                        <div class="metric-label">Total Budget</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-icon">📅</div>
-                        <div class="metric-value">${stats.totalDays}</div>
-                        <div class="metric-label">Trip Days</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-icon">✅</div>
-                        <div class="metric-value">${stats.bookingsCount}</div>
-                        <div class="metric-label">Bookings Made</div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="content-section">
-                    <div class="section-header">
-                        <h2 class="section-title">Quick Actions</h2>
-                    </div>
-                    <div style="padding: 2rem;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                            <button class="quick-action-btn" onclick="app.navigateToView('${VIEWS.ITINERARY}')">
-                                <div class="action-icon">📋</div>
-                                <div class="action-text">View Itinerary</div>
-                            </button>
-                            <button class="quick-action-btn" onclick="app.openAddActivityModal()">
-                                <div class="action-icon">➕</div>
-                                <div class="action-text">Add Activity</div>
-                            </button>
-                            <button class="quick-action-btn" onclick="app.showExportModal()">
-                                <div class="action-icon">📄</div>
-                                <div class="action-text">Export Data</div>
-                            </button>
-                            <button class="quick-action-btn" onclick="app.navigateToView('${VIEWS.TIMELINE}')">
-                                <div class="action-icon">🕒</div>
-                                <div class="action-text">View Timeline</div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <style>
-                .quick-action-btn {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 1.5rem;
-                    border: 2px solid #e2e8f0;
-                    border-radius: 0.75rem;
-                    background: white;
-                    cursor: pointer;
-                    transition: all 0.2s ease-in-out;
-                }
-
-                .quick-action-btn:hover {
-                    border-color: #667eea;
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                }
-
-                .action-icon {
-                    font-size: 2rem;
-                }
-
-                .action-text {
-                    font-weight: 500;
-                    color: #2d3748;
-                }
-            </style>
-        `;
-    }
-
-    /**
-     * Render itinerary view
-     * @returns {string} Itinerary HTML
-     */
-    renderItineraryView() {
-        if (!this.dataManager) return '<div>Loading...</div>';
-
-        const activities = this.dataManager.filteredActivities;
-
-        if (activities.length === 0) {
-            return `
-                <div class="empty-state">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
-                    <h3>No activities found</h3>
-                    <p>Add some activities to get started with your travel planning.</p>
-                    <button class="btn btn-primary" onclick="app.openAddActivityModal()">
-                        ➕ Add First Activity
-                    </button>
-                </div>
-            `;
-        }
-
-        const groupedActivities = this.dataManager.getActivitiesByDate();
-        const sortedDates = Object.keys(groupedActivities).sort();
-
-        return `
-            <div class="itinerary-content">
-                ${sortedDates.map(date => {
-            const dayActivities = groupedActivities[date];
-            return `
-                        <div class="date-group">
-                            <div class="date-header">
-                                <div class="date-info">
-                                    <div class="date-title">${Utils.formatDate(date)}</div>
-                                    <div class="date-subtitle">${dayActivities.length} activities</div>
-                                </div>
-                            </div>
-                            <div class="activity-list">
-                                ${dayActivities.map(activity => this.renderActivityCard(activity)).join('')}
-                            </div>
-                        </div>
-                    `;
-        }).join('')}
-            </div>
-        `;
-    }
-
-    /**
-     * Render timeline view
-     * @returns {string} Timeline HTML
-     */
-    renderTimelineView() {
-        if (!this.dataManager) return '<div>Loading...</div>';
-
-        const activities = this.dataManager.filteredActivities;
-
-        if (activities.length === 0) {
-            return `
-                <div class="empty-state">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">⏰</div>
-                    <h3>No activities in timeline</h3>
-                    <p>Your timeline will appear here once you add some activities.</p>
-                    <button class="btn btn-primary" onclick="app.openAddActivityModal()">
-                        ➕ Add Activity
-                    </button>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="timeline-content">
-                <div class="timeline">
-                    ${activities.map(activity => `
-                        <div class="timeline-item">
-                            <div class="activity-card">
-                                <div class="activity-header">
-                                    <div>
-                                        <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
-                                        <div class="activity-time">
-                                            ${Utils.formatDate(activity.date)}
-                                            ${activity.startTime ? ` • ${Utils.formatTime(activity.startTime)}` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="activity-actions">
-                                        <button class="btn btn-sm btn-secondary" onclick="app.editActivity('${activity.id}')">
-                                            ✏️ Edit
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="app.deleteActivity('${activity.id}')">
-                                            🗑️ Delete
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                ${activity.startFrom || activity.reachTo ? `
-                                    <div class="activity-location">
-                                        ${activity.startFrom ? `📍 From: ${Utils.escapeHtml(activity.startFrom)}` : ''}
-                                        ${activity.reachTo ? `🎯 To: ${Utils.escapeHtml(activity.reachTo)}` : ''}
-                                    </div>
-                                ` : ''}
-                                
-                                <div class="activity-details">
-                                    ${activity.transportMode ? `
-                                        <div class="detail-item">
-                                            <span class="detail-icon">${Utils.getTransportIcon(activity.transportMode)}</span>
-                                            <span>${activity.transportMode}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    ${activity.cost > 0 ? `
-                                        <div class="detail-item">
-                                            <span class="detail-icon">💰</span>
-                                            <span class="cost-display">${Utils.formatCurrency(activity.cost)}</span>
-                                        </div>
-                                    ` : ''}
-                                    
-                                    <div class="detail-item">
-                                        <span class="detail-icon">${activity.isBooked() ? '✅' : '❌'}</span>
-                                        <span class="badge ${activity.isBooked() ? 'badge-success' : 'badge-warning'}">
-                                            ${activity.isBooked() ? 'Booked' : 'Not Booked'}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                ${activity.additionalDetails ? `
-                                    <div class="activity-notes">
-                                        <strong>Notes:</strong> ${Utils.escapeHtml(activity.additionalDetails)}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Render activity card
-     * @param {ActivityModel} activity - Activity to render
-     * @returns {string} Activity card HTML
-     */
-    renderActivityCard(activity) {
-        return `
-            <div class="activity-card" data-activity-id="${activity.id}">
-                <div class="activity-header">
-                    <div>
-                        <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
-                        <div class="activity-time">
-                            ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time set'}
-                            ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
-                        </div>
-                    </div>
-                    <div class="activity-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="app.editActivity('${activity.id}')">
-                            ✏️ Edit
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="app.deleteActivity('${activity.id}')">
-                            🗑️ Delete
-                        </button>
-                    </div>
-                </div>
-                
-                ${activity.startFrom || activity.reachTo ? `
-                    <div class="activity-location">
-                        ${activity.startFrom ? `📍 From: ${Utils.escapeHtml(activity.startFrom)}` : ''}
-                        ${activity.reachTo ? `🎯 To: ${Utils.escapeHtml(activity.reachTo)}` : ''}
-                    </div>
-                ` : ''}
-                
-                <div class="activity-details">
-                    ${activity.transportMode ? `
-                        <div class="detail-item">
-                            <span class="detail-icon">${Utils.getTransportIcon(activity.transportMode)}</span>
-                            <span>${activity.transportMode}</span>
-                        </div>
-                    ` : ''}
-                    
-                    ${activity.cost > 0 ? `
-                        <div class="detail-item">
-                            <span class="detail-icon">💰</span>
-                            <span class="cost-display">${Utils.formatCurrency(activity.cost)}</span>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="detail-item">
-                        <span class="detail-icon">${activity.isBooked() ? '✅' : '❌'}</span>
-                        <span class="badge ${activity.isBooked() ? 'badge-success' : 'badge-warning'}">
-                            ${activity.isBooked() ? 'Booked' : 'Not Booked'}
-                        </span>
-                    </div>
-                </div>
-                
-                ${activity.additionalDetails ? `
-                    <div class="activity-notes">
-                        <strong>Notes:</strong> ${Utils.escapeHtml(activity.additionalDetails)}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    /**
-     * Edit activity
-     * @param {string} activityId - Activity ID
-     */
-    editActivity(activityId) {
-        const activity = this.dataManager.getActivityById(activityId);
-        if (!activity) return;
-
-        const modal = this.modals.get('activity');
-        if (!modal) return;
-
-        modal.setTitle('Edit Activity');
-
-        const form = modal.createForm({
-            fields: [
-                {
-                    name: 'activity',
-                    label: 'Activity Name',
-                    type: 'text',
-                    required: true,
-                    value: activity.activity
-                },
-                {
-                    name: 'date',
-                    label: 'Date',
-                    type: 'date',
-                    required: true,
-                    value: activity.date
-                },
-                {
-                    name: 'startTime',
-                    label: 'Start Time',
-                    type: 'time',
-                    value: activity.startTime
-                },
-                {
-                    name: 'endTime',
-                    label: 'End Time',
-                    type: 'time',
-                    value: activity.endTime
-                },
-                {
-                    name: 'startFrom',
-                    label: 'From',
-                    type: 'text',
-                    value: activity.startFrom
-                },
-                {
-                    name: 'reachTo',
-                    label: 'To',
-                    type: 'text',
-                    value: activity.reachTo
-                },
-                {
-                    name: 'transportMode',
-                    label: 'Transport',
-                    type: 'select',
-                    value: activity.transportMode,
-                    options: [
-                        { value: '', label: 'Select transport mode' },
-                        { value: 'Flight', label: '✈️ Flight' },
-                        { value: 'Train', label: '🚄 Train' },
-                        { value: 'Car', label: '🚗 Car' },
-                        { value: 'Bus', label: '🚌 Bus' },
-                        { value: 'Uber', label: '🚕 Uber/Taxi' },
-                        { value: 'Walking', label: '🚶 Walking' }
-                    ]
-                },
-                {
-                    name: 'booking',
-                    label: 'Booking Status',
-                    type: 'select',
-                    value: activity.booking,
-                    options: [
-                        { value: 'FALSE', label: 'Not Booked' },
-                        { value: 'TRUE', label: 'Booked' }
-                    ]
-                },
-                {
-                    name: 'cost',
-                    label: 'Cost ($)',
-                    type: 'number',
-                    min: 0,
-                    step: 0.01,
-                    value: activity.cost
-                },
-                {
-                    name: 'additionalDetails',
-                    label: 'Additional Details',
-                    type: 'textarea',
-                    fullWidth: true,
-                    rows: 3,
-                    value: activity.additionalDetails
-                },
-                {
-                    name: 'accommodationDetails',
-                    label: 'Accommodation',
-                    type: 'text',
-                    fullWidth: true,
-                    value: activity.accommodationDetails
-                }
-            ],
-            onSubmit: async (data) => {
-                try {
-                    await this.dataManager.updateActivity(activityId, data);
-                    return true;
-                } catch (error) {
-                    notificationService.error(error.message);
-                    return false;
-                }
-            }
-        });
-
-        modal.setContent(form);
-        modal.setFooter([
-            {
-                text: 'Cancel',
-                className: 'btn-secondary',
-                onClick: () => true
-            },
-            {
-                text: 'Update Activity',
-                className: 'btn-primary',
-                onClick: (e) => {
-                    const form = modal.modal.querySelector('form');
-                    if (form) {
-                        form.dispatchEvent(new Event('submit'));
-                    }
-                    return false;
-                }
-            }
-        ]);
-
-        modal.show();
-    }
-
-    /**
-     * Delete activity
-     * @param {string} activityId - Activity ID
-     */
-    deleteActivity(activityId) {
-        const activity = this.dataManager.getActivityById(activityId);
-        if (!activity) return;
-
-        if (confirm(`Are you sure you want to delete "${activity.activity}"?`)) {
-            try {
-                this.dataManager.deleteActivity(activityId);
-                notificationService.success('Activity deleted successfully');
-            } catch (error) {
-                notificationService.error(error.message);
-            }
-        }
-    }
-
-    /**
-     * Theme management
-     */
-    toggleTheme() {
-        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
-        this.setTheme(newTheme);
-    }
-
-    setTheme(theme) {
-        this.currentTheme = theme;
-        document.documentElement.setAttribute('data-theme', theme);
-
-        // Update theme icon
-        const themeIcon = document.querySelector('.theme-icon');
-        if (themeIcon) {
-            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
-        }
-
-        // Save theme preference
-        localStorage.setItem('travel-app-theme', theme);
-        notificationService.info(`Switched to ${theme} theme`);
-    }
-
-    loadThemePreference() {
-        const savedTheme = localStorage.getItem('travel-app-theme') || this.options.theme;
-        this.setTheme(savedTheme);
-    }
-
-    /**
-     * Auto-save management
-     */
-    setAutoSave(enabled) {
-        this.options.autoSave = enabled;
-
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-            this.autoSaveTimer = null;
-        }
-
-        if (enabled) {
-            this.setupAutoSave();
-        }
-
-        this.saveSettings();
-        notificationService.info(`Auto-save ${enabled ? 'enabled' : 'disabled'}`);
-    }
-
-    /**
-     * Clear all data
-     */
-    confirmClearData() {
-        if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-            this.dataManager.clearAll();
-            notificationService.success('All data cleared');
-
-            // Close settings modal
-            this.modals.get('settings')?.hide();
-        }
-    }
-
-    /**
-     * Save settings
-     */
-    saveSettings() {
-        const settings = {
-            theme: this.currentTheme,
-            autoSave: this.options.autoSave,
-            keyboardShortcuts: this.options.keyboardShortcuts
-        };
-
-        localStorage.setItem('travel-app-settings', JSON.stringify(settings));
-    }
-
-    /**
-     * Handle escape key
-     */
-    handleEscapeKey() {
-        // Close any open modals
-        this.modals.forEach(modal => {
-            if (modal.isVisible) {
-                modal.hide();
-            }
-        });
-
-        // Clear search
-        const searchInput = document.getElementById('globalSearch');
-        if (searchInput && document.activeElement === searchInput) {
-            searchInput.blur();
-        }
-    }
-
-    /**
-     * Handle window resize
-     */
-    handleResize() {
-        // Handle mobile responsiveness
-        const isMobile = window.innerWidth <= 768;
-
-        if (isMobile) {
-            this.closeMobileSidebar();
-        }
-    }
-
-    /**
-     * Mobile sidebar management
-     */
-    closeMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('mobileOverlay');
-
-        if (sidebar) sidebar.classList.remove('mobile-open');
-        if (overlay) overlay.classList.remove('active');
-    }
-
-    /**
-     * Update last activity timestamp
-     */
-    updateLastActivity() {
-        this.lastActivity = Date.now();
-    }
-
-    /**
-     * Show initial loading
-     */
-    showInitialLoading() {
-        // Loading handled by index.html
-    }
-
-    /**
-     * Hide initial loading
-     */
-    hideInitialLoading() {
-        const loader = document.getElementById('initialLoader');
-        if (loader) {
-            loader.classList.add('hidden');
-
-            const appContent = document.getElementById('appContent');
-            if (appContent) {
-                appContent.classList.add('loaded');
-            }
-        }
-    }
-
-    /**
-     * Handle initialization error
-     */
-    handleInitializationError(error) {
-        console.error('Application initialization failed:', error);
-
-        const container = typeof this.options.container === 'string'
-            ? document.querySelector(this.options.container)
-            : this.options.container;
-
-        if (container) {
-            container.innerHTML = `
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    text-align: center;
-                    padding: 2rem;
-                ">
-                    <div style="
-                        background: rgba(255, 255, 255, 0.1);
-                        backdrop-filter: blur(10px);
-                        border-radius: 1rem;
-                        padding: 3rem;
-                        max-width: 500px;
-                    ">
-                        <h1 style="margin-bottom: 1rem;">❌ Initialization Error</h1>
-                        <p style="margin-bottom: 2rem; line-height: 1.6;">
-                            ${Utils.escapeHtml(error.message)}
-                        </p>
-                        <button onclick="location.reload()" style="
-                            background: white;
-                            color: #667eea;
-                            border: none;
-                            padding: 0.75rem 2rem;
-                            border-radius: 0.5rem;
-                            font-weight: 600;
-                            cursor: pointer;
-                        ">
-                            Reload Application
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    /**
-     * Check if application is ready
-     */
-    isReady() {
-        return this.isInitialized && !this.isLoading;
-    }
-
-    /**
-     * Get application instance (for global access)
-     */
-    static getInstance() {
-        return window.TravelApp?.getApp();
-    }
-
-    /**
-     * Dispose of application and clean up resources
-     */
-    dispose() {
-        // Clear auto-save timer
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-        }
-
-        // Dispose of services
-        if (this.dataManager) {
-            this.dataManager.dispose();
-        }
-
-        if (this.viewManager) {
-            this.viewManager.dispose();
-        }
-
-        if (this.fileHandler) {
-            this.fileHandler.dispose();
-        }
-
-        // Dispose of modals
-        this.modals.forEach(modal => modal.destroy());
-        this.modals.clear();
-
-        // Remove global reference
-        if (window.app === this) {
-            delete window.app;
-        }
-
-        // Remove event listeners
-        this.removeAllListeners();
-
-        console.log('Application disposed');
-    }
-}
-
-// Make app globally accessible for onclick handlers
-window.app = null;
-
-// Export for module usage
-export default Application;
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem

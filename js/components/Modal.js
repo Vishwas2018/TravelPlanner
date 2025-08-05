@@ -1074,5 +1074,4 @@ export class Modal {
 }
 
 // Export Modal class
-export { Modal };
 export default Modal;
