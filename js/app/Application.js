@@ -12,6 +12,9 @@ import { FileHandler } from '../data/FileHandler.js';
 import { notificationService } from '../services/NotificationService.js';
 import { validationService } from '../services/ValidationService.js';
 import { Utils } from '../core/utils.js';
+import { DashboardView } from '../views/DashboardView.js';
+import { ItineraryView } from '../views/ItineraryView.js';
+import { TimelineView } from '../views/TimelineView.js';
 import {
     APP_CONFIG,
     VIEWS,
@@ -39,6 +42,11 @@ export class Application extends EventManager {
         this.fileHandler = null;
         this.storage = null;
 
+        // View instances
+        this.dashboardView = null;
+        this.itineraryView = null;
+        this.timelineView = null;
+
         // UI components
         this.modals = new Map();
         this.currentTheme = this.options.theme;
@@ -59,6 +67,20 @@ export class Application extends EventManager {
      */
     showInitialLoading() {
         console.log('Application loading...');
+    }
+
+    /**
+     * Hide initial loading
+     */
+    hideInitialLoading() {
+        const loader = document.getElementById('initialLoader');
+        if (loader) {
+            loader.classList.add('hidden');
+            const appContent = document.getElementById('appContent');
+            if (appContent) {
+                appContent.classList.add('loaded');
+            }
+        }
     }
 
     /**
@@ -322,6 +344,7 @@ export class Application extends EventManager {
             { view: VIEWS.TIMELINE, icon: '🕒', label: 'Timeline' }
         ];
 
+        navItems.innerHTML = '';
         navItems.forEach(item => {
             const navElement = document.createElement('div');
             navElement.className = 'nav-item';
@@ -598,6 +621,28 @@ export class Application extends EventManager {
     }
 
     /**
+     * Handle escape key press
+     */
+    handleEscapeKey() {
+        // Close any open modals
+        this.modals.forEach(modal => {
+            if (modal.isVisible) {
+                modal.hide();
+            }
+        });
+
+        // Close mobile sidebar
+        this.closeMobileSidebar();
+
+        // Clear search
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput && searchInput.value) {
+            searchInput.value = '';
+            this.handleSearch('');
+        }
+    }
+
+    /**
      * Load theme preference
      */
     loadThemePreference() {
@@ -635,32 +680,52 @@ export class Application extends EventManager {
      * Register application views
      */
     registerViews() {
+        // Create view instances
+        this.dashboardView = new DashboardView(this.dataManager);
+        this.itineraryView = new ItineraryView(this.dataManager);
+        this.timelineView = new TimelineView(this.dataManager);
+
         // Dashboard view
         this.viewManager.registerView(VIEWS.DASHBOARD, {
             title: 'Dashboard',
             description: 'Overview of your travel itinerary',
-            render: async () => {
-                return this.renderDashboardView();
-            }
+            render: async () => this.renderDashboardView()
         });
 
         // Itinerary view
         this.viewManager.registerView(VIEWS.ITINERARY, {
             title: 'Itinerary',
             description: 'Detailed view of your activities',
-            render: async () => {
-                return this.renderItineraryView();
-            }
+            render: async () => this.renderItineraryView()
         });
 
         // Timeline view
         this.viewManager.registerView(VIEWS.TIMELINE, {
             title: 'Timeline',
             description: 'Chronological view of your journey',
-            render: async () => {
-                return this.renderTimelineView();
-            }
+            render: async () => this.renderTimelineView()
         });
+    }
+
+    /**
+     * Render dashboard view
+     */
+    renderDashboardView() {
+        return this.dashboardView.render();
+    }
+
+    /**
+     * Render itinerary view
+     */
+    renderItineraryView() {
+        return this.itineraryView.render();
+    }
+
+    /**
+     * Render timeline view
+     */
+    renderTimelineView() {
+        return this.timelineView.render();
     }
 
     /**
@@ -813,6 +878,7 @@ export class Application extends EventManager {
                     name: 'booking',
                     label: 'Booking Status',
                     type: 'select',
+                    value: activity.booking,
                     options: [
                         { value: 'FALSE', label: 'Not Booked' },
                         { value: 'TRUE', label: 'Booked' }
@@ -823,7 +889,8 @@ export class Application extends EventManager {
                     label: 'Cost ($)',
                     type: 'number',
                     min: 0,
-                    step: 0.01
+                    step: 0.01,
+                    value: activity.cost
                 },
                 {
                     name: 'additionalDetails',
@@ -831,19 +898,19 @@ export class Application extends EventManager {
                     type: 'textarea',
                     fullWidth: true,
                     rows: 3,
-                    placeholder: 'Any additional information...'
+                    value: activity.additionalDetails
                 },
                 {
                     name: 'accommodationDetails',
                     label: 'Accommodation',
                     type: 'text',
                     fullWidth: true,
-                    placeholder: 'Hotel or accommodation details'
+                    value: activity.accommodationDetails
                 }
             ],
             onSubmit: async (data) => {
                 try {
-                    await this.dataManager.addActivity(data);
+                    await this.dataManager.updateActivity(activityId, data);
                     return true; // Close modal
                 } catch (error) {
                     notificationService.error(error.message);
@@ -857,22 +924,61 @@ export class Application extends EventManager {
             {
                 text: 'Cancel',
                 className: 'btn-secondary',
-                onClick: () => true // Close modal
+                onClick: () => true
             },
             {
-                text: 'Save Activity',
+                text: 'Update Activity',
                 className: 'btn-primary',
                 onClick: (e) => {
                     const form = modal.modal.querySelector('form');
                     if (form) {
                         form.dispatchEvent(new Event('submit'));
                     }
-                    return false; // Let form handler control modal
+                    return false;
                 }
             }
         ]);
 
         modal.show();
+    }
+
+    /**
+     * Delete activity
+     * @param {string} activityId - Activity ID to delete
+     */
+    deleteActivity(activityId) {
+        const activity = this.dataManager.getActivityById(activityId);
+        if (!activity) {
+            notificationService.error('Activity not found');
+            return;
+        }
+
+        notificationService.confirm(
+            `Are you sure you want to delete "${activity.activity}"?`,
+            {
+                onConfirm: () => {
+                    try {
+                        this.dataManager.deleteActivity(activityId);
+                    } catch (error) {
+                        notificationService.error(error.message);
+                    }
+                },
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            }
+        );
+    }
+
+    /**
+     * Duplicate activity
+     * @param {string} activityId - Activity ID to duplicate
+     */
+    duplicateActivity(activityId) {
+        try {
+            this.dataManager.duplicateActivity(activityId);
+        } catch (error) {
+            notificationService.error(error.message);
+        }
     }
 
     /**
@@ -963,6 +1069,48 @@ export class Application extends EventManager {
     }
 
     /**
+     * Export data
+     * @param {string} format - Export format (excel, csv, json)
+     */
+    async exportData(format) {
+        try {
+            const activities = this.dataManager.activities;
+            const timestamp = new Date().toISOString().split('T')[0];
+            let filename, content, mimeType;
+
+            switch (format) {
+                case 'excel':
+                    content = this.fileHandler.exportToExcel(activities);
+                    filename = `travel_itinerary_${timestamp}.xlsx`;
+                    mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                    break;
+
+                case 'csv':
+                    content = this.fileHandler.exportToCSV(activities);
+                    filename = `travel_itinerary_${timestamp}.csv`;
+                    mimeType = 'text/csv';
+                    break;
+
+                case 'json':
+                    content = this.fileHandler.exportToJSON(activities);
+                    filename = `travel_itinerary_${timestamp}.json`;
+                    mimeType = 'application/json';
+                    break;
+
+                default:
+                    throw new Error('Invalid export format');
+            }
+
+            this.fileHandler.downloadFile(content, filename, mimeType);
+            notificationService.success(SUCCESS_MESSAGES.DATA_EXPORTED);
+
+        } catch (error) {
+            console.error('Export error:', error);
+            notificationService.error(`Export failed: ${error.message}`);
+        }
+    }
+
+    /**
      * Show import modal
      */
     showImportModal() {
@@ -994,4 +1142,530 @@ export class Application extends EventManager {
 
         const instructions = document.createElement('div');
         instructions.innerHTML = `
-            <div style="margin-top: 1.5rem; padding-top: 1.5rem
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                <h4 style="margin-bottom: 1rem; color: #2d3748;">Import Instructions</h4>
+                <ul style="color: #718096; font-size: 0.875rem; line-height: 1.6;">
+                    <li>Supported formats: Excel (.xlsx, .xls), CSV, and JSON</li>
+                    <li>Excel/CSV files should have headers: Activity, Date, Start Time, End Time, From, To, Transport Mode, Booking Required, Cost</li>
+                    <li>Dates should be in YYYY-MM-DD format</li>
+                    <li>Times should be in HH:MM format</li>
+                    <li>Booking status should be TRUE or FALSE</li>
+                </ul>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-sm btn-secondary" onclick="app.downloadTemplate()">
+                        📥 Download Template
+                    </button>
+                </div>
+            </div>
+        `;
+
+        content.appendChild(instructions);
+        modal.setContent(content);
+        modal.setFooter([
+            {
+                text: 'Cancel',
+                className: 'btn-secondary',
+                onClick: () => true
+            }
+        ]);
+
+        modal.show();
+    }
+
+    /**
+     * Handle imported data
+     * @param {object} importResult - Import result with activities and metadata
+     */
+    handleImportData(importResult) {
+        try {
+            const { activities, metadata } = importResult;
+
+            if (!activities || activities.length === 0) {
+                notificationService.warning('No activities found in the imported file');
+                return;
+            }
+
+            // Import activities
+            const result = this.dataManager.importActivities(activities.map(a => a.toJSON()));
+
+            // Show import summary
+            let message = `Import complete: ${result.imported} activities imported`;
+            if (result.skipped > 0) {
+                message += `, ${result.skipped} skipped`;
+            }
+
+            if (result.errors.length > 0) {
+                console.warn('Import errors:', result.errors);
+                notificationService.warning(message + '. Check console for details.');
+            } else {
+                notificationService.success(message);
+            }
+
+        } catch (error) {
+            console.error('Import handling error:', error);
+            notificationService.error(`Import failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Download template file
+     */
+    downloadTemplate() {
+        try {
+            this.fileHandler.downloadTemplate('excel');
+            notificationService.success(SUCCESS_MESSAGES.TEMPLATE_DOWNLOADED);
+        } catch (error) {
+            console.error('Template download error:', error);
+            notificationService.error('Failed to download template');
+        }
+    }
+
+    /**
+     * Open settings modal
+     */
+    openSettingsModal() {
+        const modal = this.modals.get('settings');
+        if (!modal) return;
+
+        const content = document.createElement('div');
+        content.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="radio" name="theme" value="light" ${this.currentTheme === 'light' ? 'checked' : ''}>
+                            Light Theme
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="radio" name="theme" value="dark" ${this.currentTheme === 'dark' ? 'checked' : ''}>
+                            Dark Theme
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Data Management</h3>
+                    <div class="setting-item">
+                        <button class="btn btn-secondary" id="clearDataBtn">
+                            🗑️ Clear All Data
+                        </button>
+                        <p style="font-size: 0.875rem; color: #718096; margin-top: 0.5rem;">
+                            This will permanently delete all your activities
+                        </p>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn btn-secondary" id="exportBackupBtn">
+                            💾 Create Backup
+                        </button>
+                        <p style="font-size: 0.875rem; color: #718096; margin-top: 0.5rem;">
+                            Download a complete backup of your data
+                        </p>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Application Info</h3>
+                    <div class="setting-item">
+                        <p><strong>Version:</strong> ${APP_CONFIG.version}</p>
+                        <p><strong>Total Activities:</strong> ${this.dataManager.activities.length}</p>
+                        <p><strong>Storage Used:</strong> ${this.getStorageUsage()}</p>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .settings-section {
+                    padding-bottom: 1.5rem;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .settings-section:last-child {
+                    border-bottom: none;
+                    padding-bottom: 0;
+                }
+                .settings-section h3 {
+                    margin-bottom: 1rem;
+                    color: #2d3748;
+                    font-size: 1.125rem;
+                }
+                .setting-item {
+                    margin-bottom: 1rem;
+                }
+                .setting-item:last-child {
+                    margin-bottom: 0;
+                }
+                .setting-item label {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    cursor: pointer;
+                }
+            </style>
+        `;
+
+        modal.setContent(content);
+        modal.setFooter([
+            {
+                text: 'Close',
+                className: 'btn-primary',
+                onClick: () => true
+            }
+        ]);
+
+        modal.show().then(() => {
+            // Theme change handlers
+            const themeRadios = modal.modal.querySelectorAll('input[name="theme"]');
+            themeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.setTheme(e.target.value);
+                });
+            });
+
+            // Clear data handler
+            const clearDataBtn = modal.modal.querySelector('#clearDataBtn');
+            if (clearDataBtn) {
+                clearDataBtn.addEventListener('click', () => {
+                    this.clearAllData();
+                });
+            }
+
+            // Export backup handler
+            const exportBackupBtn = modal.modal.querySelector('#exportBackupBtn');
+            if (exportBackupBtn) {
+                exportBackupBtn.addEventListener('click', () => {
+                    this.exportData('json');
+                });
+            }
+        });
+    }
+
+    /**
+     * Clear all application data
+     */
+    clearAllData() {
+        notificationService.confirm(
+            'Are you sure you want to clear all data? This action cannot be undone.',
+            {
+                onConfirm: () => {
+                    try {
+                        this.dataManager.clearAll();
+                        localStorage.clear();
+                        notificationService.success('All data cleared successfully');
+
+                        // Close settings modal
+                        this.modals.get('settings').hide();
+                    } catch (error) {
+                        notificationService.error(`Failed to clear data: ${error.message}`);
+                    }
+                },
+                confirmText: 'Clear All Data',
+                cancelText: 'Cancel'
+            }
+        );
+    }
+
+    /**
+     * Get storage usage information
+     */
+    getStorageUsage() {
+        try {
+            const data = localStorage.getItem(APP_CONFIG.storageKey);
+            if (data) {
+                return Utils.formatFileSize(new Blob([data]).size);
+            }
+            return '0 KB';
+        } catch (error) {
+            return 'Unknown';
+        }
+    }
+
+    /**
+     * Set itinerary view mode
+     * @param {string} mode - View mode ('grouped' or 'list')
+     */
+    setItineraryViewMode(mode) {
+        if (this.itineraryView) {
+            this.itineraryView.setViewMode(mode);
+            this.viewManager.refresh();
+        }
+    }
+
+    /**
+     * Handle initialization error
+     * @param {Error} error - Initialization error
+     */
+    handleInitializationError(error) {
+        console.error('Application initialization failed:', error);
+
+        const container = typeof this.options.container === 'string'
+            ? document.querySelector(this.options.container)
+            : this.options.container;
+
+        if (container) {
+            container.innerHTML = `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    text-align: center;
+                    padding: 2rem;
+                ">
+                    <div style="
+                        background: rgba(255, 255, 255, 0.1);
+                        backdrop-filter: blur(10px);
+                        border-radius: 1rem;
+                        padding: 3rem;
+                        max-width: 500px;
+                    ">
+                        <h1 style="margin-bottom: 1rem;">⚠️ Application Error</h1>
+                        <p style="margin-bottom: 2rem; line-height: 1.6;">
+                            The application failed to initialize properly. Please try refreshing the page.
+                        </p>
+                        <details style="margin-bottom: 2rem; text-align: left;">
+                            <summary style="cursor: pointer; margin-bottom: 0.5rem;">Technical Details</summary>
+                            <pre style="
+                                background: rgba(0, 0, 0, 0.2);
+                                padding: 1rem;
+                                border-radius: 0.5rem;
+                                overflow: auto;
+                                font-size: 0.75rem;
+                                white-space: pre-wrap;
+                            ">${error.message}</pre>
+                        </details>
+                        <div>
+                            <button onclick="location.reload()" style="
+                                background: white;
+                                color: #667eea;
+                                border: none;
+                                padding: 0.75rem 2rem;
+                                border-radius: 0.5rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                margin-right: 1rem;
+                            ">
+                                🔄 Reload Application
+                            </button>
+                            <button onclick="localStorage.clear(); location.reload()" style="
+                                background: transparent;
+                                color: white;
+                                border: 1px solid white;
+                                padding: 0.75rem 2rem;
+                                border-radius: 0.5rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                            ">
+                                🗑️ Clear Data & Reload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Check if application is ready
+     * @returns {boolean} Is ready
+     */
+    isReady() {
+        return this.isInitialized && !this.isLoading;
+    }
+
+    /**
+     * Get application version
+     * @returns {string} Application version
+     */
+    getVersion() {
+        return APP_CONFIG.version;
+    }
+
+    /**
+     * Dispose of the application and clean up resources
+     */
+    dispose() {
+        // Clear auto-save timer
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+        }
+
+        // Dispose of services
+        if (this.dataManager) {
+            this.dataManager.dispose();
+        }
+
+        if (this.viewManager) {
+            this.viewManager.dispose();
+        }
+
+        if (this.fileHandler) {
+            this.fileHandler.dispose();
+        }
+
+        // Dispose of modals
+        this.modals.forEach(modal => modal.destroy());
+        this.modals.clear();
+
+        // Remove all event listeners
+        this.removeAllListeners();
+
+        // Clear references
+        this.dataManager = null;
+        this.viewManager = null;
+        this.fileHandler = null;
+        this.storage = null;
+        this.dashboardView = null;
+        this.itineraryView = null;
+        this.timelineView = null;
+
+        console.log('Application disposed');
+    }
+}
+
+// /**
+//  * Edit activity
+//  * @param {string} activityId - Activity ID to edit
+//  */
+// editActivity(activityId) {
+//     const activity = this.dataManager.getActivityById(activityId);
+//     if (!activity) {
+//         notificationService.error('Activity not found');
+//         return;
+//     }
+//
+//     const modal = this.modals.get('activity');
+//     if (!modal) return;
+//
+//     modal.setTitle('Edit Activity');
+//
+//     const form = modal.createForm({
+//         fields: [
+//             {
+//                 name: 'activity',
+//                 label: 'Activity Name',
+//                 type: 'text',
+//                 required: true,
+//                 value: activity.activity
+//             },
+//             {
+//                 name: 'date',
+//                 label: 'Date',
+//                 type: 'date',
+//                 required: true,
+//                 value: activity.date
+//             },
+//             {
+//                 name: 'startTime',
+//                 label: 'Start Time',
+//                 type: 'time',
+//                 value: activity.startTime
+//             },
+//             {
+//                 name: 'endTime',
+//                 label: 'End Time',
+//                 type: 'time',
+//                 value: activity.endTime
+//             },
+//             {
+//                 name: 'startFrom',
+//                 label: 'From',
+//                 type: 'text',
+//                 value: activity.startFrom
+//             },
+//             {
+//                 name: 'reachTo',
+//                 label: 'To',
+//                 type: 'text',
+//                 value: activity.reachTo
+//             },
+//             {
+//                 name: 'transportMode',
+//                 label: 'Transport',
+//                 type: 'select',
+//                 value: activity.transportMode,
+//                 options: [
+//                     { value: '', label: 'Select transport mode' },
+//                     { value: 'Flight', label: '✈️ Flight' },
+//                     { value: 'Train', label: '🚄 Train' },
+//                     { value: 'Car', label: '🚗 Car' },
+//                     { value: 'Bus', label: '🚌 Bus' },
+//                     { value: 'Uber', label: '🚕 Uber/Taxi' },
+//                     { value: 'Walking', label: '🚶 Walking' },
+//                     { value: 'Auto', label: '🛺 Auto Rickshaw' },
+//                     { value: 'Tube', label: '🚇 Tube/Metro' }
+//                 ]
+//             },
+//             {
+//                 name: 'booking',
+//                 label: 'Booking Status',
+//                 type: 'select',
+//                 value: activity.booking,
+//                 options: [
+//                     { value: 'FALSE', label: 'Not Booked' },
+//                     { value: 'TRUE', label: 'Booked' }
+//                 ]
+//             },
+//             {
+//                 name: 'cost',
+//                 label: 'Cost ($)',
+//                 type: 'number',
+//                 min: 0,
+//                 step: 0.01,
+//                 value: activity.cost
+//             },
+//             {
+//                 name: 'additionalDetails',
+//                 label: 'Additional Details',
+//                 type: 'textarea',
+//                 fullWidth: true,
+//                 rows: 3,
+//                 value: activity.additionalDetails
+//             },
+//             {
+//                 name: 'accommodationDetails',
+//                 label: 'Accommodation',
+//                 type: 'text',
+//                 fullWidth: true,
+//                 value: activity.accommodationDetails
+//             }
+//         ],
+//         onSubmit: async (formData) => {
+//             try {
+//                 await this.dataManager.updateActivity(activityId, formData);
+//                 notificationService.success('Activity updated successfully');
+//                 modal.hide();
+//             } catch (error) {
+//                 notificationService.error('Failed to update activity');
+//                 console.error(error);
+//             }
+//         }
+//     });
+//
+//     modal.setContent(form);
+//     modal.setFooter([
+//         {
+//             text: 'Cancel',
+//             className: 'btn-secondary',
+//             onClick: () => true
+//         },
+//         {
+//             text: 'Update Activity',
+//             className: 'btn-primary',
+//             onClick: (e) => {
+//                 const form = modal.modal.querySelector('form');
+//                 if (form) {
+//                     form.dispatchEvent(new Event('submit'));
+//                 }
+//                 return false;
+//             }
+//         }
+//     ]);
+//
+//     modal.show();
+// }
