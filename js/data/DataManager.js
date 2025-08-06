@@ -358,8 +358,16 @@ export class DataManager extends EventManager {
      * @param {string} id - Activity ID to duplicate
      * @returns {ActivityModel} Duplicated activity
      */
+    /**
+     * Fixed duplicateActivity method for DataManager.js
+     * Replace the existing duplicateActivity method with this version
+     */
+
     duplicateActivity(id) {
+        const startTime = performance.now();
+
         try {
+            // Fix: Use activities array directly instead of getActivityById
             const activity = this.activities.find(a => a.id === id);
             if (!activity) {
                 throw new Error(ERROR_MESSAGES.ACTIVITY_NOT_FOUND);
@@ -376,6 +384,7 @@ export class DataManager extends EventManager {
             this.emit(EVENTS.ACTIVITY_ADDED, duplicated);
             this.emit(EVENTS.DATA_UPDATED);
 
+            this.updateStats('duplicate', performance.now() - startTime);
             return duplicated;
         } catch (error) {
             console.error('Failed to duplicate activity:', error);

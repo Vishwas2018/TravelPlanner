@@ -362,7 +362,7 @@ class AppBootstrap {
 
         try {
             // Check if service worker file exists before registering
-            const swResponse = await fetch('/sw.js', { method: 'HEAD' }).catch(() => null);
+            const response = await fetch('./sw.js', { method: 'HEAD' });
 
             if (!swResponse || !swResponse.ok) {
                 console.log('ℹ️ Service Worker file not found, skipping registration');

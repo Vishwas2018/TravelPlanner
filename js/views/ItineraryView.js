@@ -1,5 +1,5 @@
 /**
- * Travel Itinerary Manager - Itinerary View
+ * Travel Itinerary Manager - Fixed ItineraryView
  * Displays activities grouped by date with detailed information
  */
 
@@ -12,11 +12,11 @@ export class ItineraryView {
     }
 
     /**
-     * Render itinerary view
-     * @returns {string} Itinerary HTML
+     * Render itinerary view - FIXED: Use correct data source
      */
     render() {
-        const activities = this.dataManager.filteredActivities;
+        // FIXED: Use filteredActivities or fallback to all activities
+        const activities = this.dataManager.filteredActivities || this.dataManager.activities || [];
 
         if (activities.length === 0) {
             return this.renderEmptyState();
@@ -32,7 +32,6 @@ export class ItineraryView {
 
     /**
      * Render empty state
-     * @returns {string} Empty state HTML
      */
     renderEmptyState() {
         return `
@@ -40,7 +39,7 @@ export class ItineraryView {
                 <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
                 <h3>No activities found</h3>
                 <p>Add some activities to get started with your travel planning.</p>
-                <button class="btn btn-primary" onclick="app.openAddActivityModal()">
+                <button class="btn btn-primary" onclick="window.app?.openAddActivityModal()">
                     ➕ Add First Activity
                 </button>
             </div>
@@ -48,8 +47,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render view controls
-     * @returns {string} View controls HTML
+     * Render view controls - FIXED: Better onclick handlers
      */
     renderViewControls() {
         return `
@@ -58,11 +56,11 @@ export class ItineraryView {
                     <h2 class="section-title">Travel Itinerary</h2>
                     <div class="view-toggles">
                         <button class="view-toggle ${this.viewMode === 'grouped' ? 'active' : ''}" 
-                                onclick="app.setItineraryViewMode('grouped')">
+                                onclick="window.app?.setItineraryViewMode('grouped')">
                             📅 By Date
                         </button>
                         <button class="view-toggle ${this.viewMode === 'list' ? 'active' : ''}" 
-                                onclick="app.setItineraryViewMode('list')">
+                                onclick="window.app?.setItineraryViewMode('list')">
                             📋 List View
                         </button>
                     </div>
@@ -73,12 +71,14 @@ export class ItineraryView {
 
     /**
      * Render grouped view (by date)
-     * @param {Array} activities - Activities to display
-     * @returns {string} Grouped view HTML
      */
     renderGroupedView(activities) {
         const groupedActivities = this.dataManager.getActivitiesByDate();
         const sortedDates = Object.keys(groupedActivities).sort();
+
+        if (sortedDates.length === 0) {
+            return this.renderEmptyState();
+        }
 
         return `
             <div class="grouped-view">
@@ -110,9 +110,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render list view
-     * @param {Array} activities - Activities to display
-     * @returns {string} List view HTML
+     * Render list view - FIXED: Proper table structure and data display
      */
     renderListView(activities) {
         return `
@@ -138,9 +136,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render activity card
-     * @param {ActivityModel} activity - Activity to render
-     * @returns {string} Activity card HTML
+     * Render activity card - FIXED: Safe onclick handlers
      */
     renderActivityCard(activity) {
         return `
@@ -155,13 +151,13 @@ export class ItineraryView {
                         </div>
                     </div>
                     <div class="activity-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="app.editActivity('${activity.id}')" title="Edit activity">
+                        <button class="btn btn-sm btn-secondary" onclick="window.app?.editActivity('${activity.id}')" title="Edit activity">
                             ✏️
                         </button>
-                        <button class="btn btn-sm btn-secondary" onclick="app.duplicateActivity('${activity.id}')" title="Duplicate activity">
+                        <button class="btn btn-sm btn-secondary" onclick="window.app?.duplicateActivity('${activity.id}')" title="Duplicate activity">
                             📋
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="app.deleteActivity('${activity.id}')" title="Delete activity">
+                        <button class="btn btn-sm btn-danger" onclick="window.app?.deleteActivity('${activity.id}')" title="Delete activity">
                             🗑️
                         </button>
                     </div>
@@ -188,8 +184,6 @@ export class ItineraryView {
 
     /**
      * Render activity details section
-     * @param {ActivityModel} activity - Activity
-     * @returns {string} Details HTML
      */
     renderActivityDetails(activity) {
         const details = [];
@@ -260,9 +254,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render activity table row
-     * @param {ActivityModel} activity - Activity
-     * @returns {string} Table row HTML
+     * Render activity table row - FIXED: Safe onclick handlers
      */
     renderActivityRow(activity) {
         return `
@@ -303,13 +295,13 @@ export class ItineraryView {
                 </div>
                 <div class="col-actions">
                     <div class="action-buttons">
-                        <button class="btn btn-sm btn-secondary" onclick="app.editActivity('${activity.id}')" title="Edit">
+                        <button class="btn btn-sm btn-secondary" onclick="window.app?.editActivity('${activity.id}')" title="Edit">
                             ✏️
                         </button>
-                        <button class="btn btn-sm btn-secondary" onclick="app.duplicateActivity('${activity.id}')" title="Duplicate">
+                        <button class="btn btn-sm btn-secondary" onclick="window.app?.duplicateActivity('${activity.id}')" title="Duplicate">
                             📋
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="app.deleteActivity('${activity.id}')" title="Delete">
+                        <button class="btn btn-sm btn-danger" onclick="window.app?.deleteActivity('${activity.id}')" title="Delete">
                             🗑️
                         </button>
                     </div>
@@ -320,8 +312,6 @@ export class ItineraryView {
 
     /**
      * Calculate statistics for a day
-     * @param {Array} activities - Day's activities
-     * @returns {object} Day statistics
      */
     calculateDayStats(activities) {
         const totalCost = activities.reduce((sum, activity) => sum + activity.cost, 0);
@@ -345,8 +335,6 @@ export class ItineraryView {
 
     /**
      * Format duration in minutes to readable string
-     * @param {number} minutes - Duration in minutes
-     * @returns {string} Formatted duration
      */
     formatDuration(minutes) {
         const hours = Math.floor(minutes / 60);
@@ -359,8 +347,6 @@ export class ItineraryView {
 
     /**
      * Get category icon
-     * @param {string} category - Category name
-     * @returns {string} Category icon
      */
     getCategoryIcon(category) {
         const icons = {
@@ -377,10 +363,11 @@ export class ItineraryView {
     }
 
     /**
-     * Set view mode
-     * @param {string} mode - View mode ('grouped' or 'list')
+     * Set view mode - FIXED
      */
     setViewMode(mode) {
-        this.viewMode = mode;
+        if (mode === 'grouped' || mode === 'list') {
+            this.viewMode = mode;
+        }
     }
 }
