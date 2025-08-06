@@ -131,7 +131,7 @@ body {
     background: var(--surface);
     border-radius: var(--radius-xl);
     margin: var(--space-4);
-    overflow: hidden;
+    ;
     box-shadow: var(--shadow-xl);
 }
 
@@ -142,7 +142,7 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: hidden;
+    ;
 }
 
 .sidebar::before {
@@ -233,7 +233,7 @@ body {
     cursor: pointer;
     transition: all var(--transition);
     position: relative;
-    overflow: hidden;
+    ;
     color: var(--text-primary);
 }
 
@@ -309,7 +309,7 @@ body {
     cursor: pointer;
     transition: all var(--transition);
     position: relative;
-    overflow: hidden;
+    ;
     text-align: left;
     font-family: inherit;
 }
@@ -485,9 +485,8 @@ body {
 
 /* View Container */
 .view-container {
-    flex: 1;
-    padding: var(--space-8);
-    overflow-y: auto;
+    height: calc(100vh - 120px); /* Add this */
+    scroll-behavior: smooth; /* Add this */
 }
 
 /* Dashboard Grid */
@@ -506,7 +505,7 @@ body {
     box-shadow: var(--shadow);
     border: 1px solid var(--gray-200);
     position: relative;
-    overflow: hidden;
+    ;
     transition: all var(--transition);
 }
 
@@ -574,7 +573,7 @@ body {
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow);
     border: 1px solid var(--gray-200);
-    overflow: hidden;
+    ;
     margin-bottom: var(--space-6);
 }
 
@@ -629,7 +628,7 @@ body {
     padding: var(--space-6);
     transition: all var(--transition);
     position: relative;
-    overflow: hidden;
+    ;
     margin-bottom: var(--space-4);
 }
 
@@ -869,7 +868,7 @@ body {
     background: var(--gray-200);
     border-radius: var(--radius-full);
     height: 8px;
-    overflow: hidden;
+    ;
     position: relative;
 }
 
@@ -1237,7 +1236,7 @@ body {
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    ;
     transition: all var(--transition);
 }
 
@@ -1425,7 +1424,7 @@ body {
     transition: all var(--transition);
     pointer-events: auto;
     position: relative;
-    overflow: hidden;
+    ;
 }
 
 .notification::before {
@@ -1588,7 +1587,8 @@ body {
 
 @media (max-width: 640px) {
     .view-container {
-        padding: var(--space-4);
+        height: calc(100vh - 120px); /* Add this */
+        scroll-behavior: smooth; /* Add this */
     }
 
     .page-header {

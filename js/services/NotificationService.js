@@ -71,7 +71,7 @@ export class NotificationService {
                 transition: all 200ms ease-in-out;
                 pointer-events: auto;
                 position: relative;
-                overflow: hidden;
+                ;
             }
 
             .notification::before {
