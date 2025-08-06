@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Travel Manager">
 
+    <!-- Fixed CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdnjs.cloudflare.com; worker-src 'self';">
+
     <title>Travel Itinerary Manager - Plan Your Perfect Journey</title>
 
     <!-- Preconnect to external resources -->
@@ -20,6 +23,9 @@
     <!-- DNS prefetch for performance -->
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style">
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -27,10 +33,10 @@
     <link rel="stylesheet" href="styles.css">
 
     <!-- Progressive Web App Manifest -->
-    <link rel="manifest" href="/TravalPlanner/manifest.json">
+    <link rel="manifest" href="./manifest.json">
 
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+    <!-- Fixed Favicon - Using simple data URI -->
+    <link rel="icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🌍</text></svg>">
 
     <!-- Module preload for faster loading -->
     <link rel="modulepreload" href="./js/main.js">
@@ -47,7 +53,6 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            ;
         }
 
         .initial-loader {
@@ -173,91 +178,8 @@
 <!-- Notification Container -->
 <div id="notificationContainer" class="notification-container"></div>
 
-<!-- Service Worker Registration with Error Handling -->
-<script>
-    // Service Worker Registration with proper error handling
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-            try {
-                // Check if sw.js exists before attempting to register
-                const response = await fetch('/sw.js', { method: 'HEAD' });
-                if (response.ok) {
-                    const registration = await navigator.serviceWorker.register('./sw.js');
-                    console.log('✅ Service Worker registered successfully:', registration);
-
-                    // Listen for updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('🔄 New version available');
-                                    // Could show update notification here
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    console.log('ℹ️ Service Worker not available (sw.js not found)');
-                }
-            } catch (error) {
-                console.warn('⚠️ Service Worker registration failed:', error.message);
-            }
-        });
-    } else {
-        console.log('ℹ️ Service Worker not supported in this browser');
-    }
-
-    // Remove loader after maximum timeout
-    setTimeout(() => {
-        const loader = document.getElementById('initialLoader');
-        if (loader && !loader.classList.contains('hidden')) {
-            loader.classList.add('hidden');
-            document.getElementById('appContent').classList.add('loaded');
-            console.warn('⚠️ Application took longer than expected to load');
-        }
-    }, 15000);
-
-    // Global error handler
-    window.addEventListener('error', (event) => {
-        console.error('🚨 Global error:', event.error);
-        showErrorFallback(event.error?.message || 'An unexpected error occurred');
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-        console.error('🚨 Unhandled promise rejection:', event.reason);
-        showErrorFallback(event.reason?.message || 'An unexpected error occurred');
-    });
-
-    function showErrorFallback(message) {
-        const appContent = document.getElementById('appContent');
-        const loader = document.getElementById('initialLoader');
-
-        if (loader) loader.classList.add('hidden');
-
-        if (appContent && !appContent.innerHTML.trim()) {
-            appContent.innerHTML = `
-                    <div class="error-container">
-                        <div class="error-content">
-                            <h1 style="margin-bottom: 1rem;">❌ Application Error</h1>
-                            <p style="margin-bottom: 2rem; line-height: 1.6;">
-                                ${message}
-                            </p>
-                            <div>
-                                <button class="error-button" onclick="location.reload()">
-                                    🔄 Reload Application
-                                </button>
-                                <button class="error-button" onclick="localStorage.clear(); location.reload()">
-                                    🗑️ Clear Data & Reload
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            appContent.classList.add('loaded');
-        }
-    }
-</script>
+<!-- Moved to external file for CSP compliance -->
+<script src="./js/init.js"></script>
 
 <!-- Main Application Script (ES Modules) -->
 <script type="module">
