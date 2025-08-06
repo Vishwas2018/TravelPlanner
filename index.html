@@ -17,6 +17,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
+    <!-- DNS prefetch for performance -->
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -28,6 +31,9 @@
 
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+
+    <!-- Module preload for faster loading -->
+    <link rel="modulepreload" href="./js/main.js">
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -260,21 +266,29 @@
         const module = await import('./js/main.js');
         console.log('✅ Application module loaded successfully');
 
-        // Check if app is ready
+        // Improved ready check with validation
         const checkReady = () => {
-            if (window.TravelApp && window.TravelApp.isReady()) {
+            if (window.TravelApp?.isReady?.()) {
                 const loader = document.getElementById('initialLoader');
                 if (loader) {
                     loader.classList.add('hidden');
                     document.getElementById('appContent').classList.add('loaded');
                 }
+                console.log('✅ Application ready');
             } else {
-                setTimeout(checkReady, 100);
+                requestAnimationFrame(checkReady);
             }
         };
 
-        // Small delay to show loading animation
-        setTimeout(checkReady, 500);
+        // Validate TravelApp exists before checking ready state
+        setTimeout(() => {
+            if (window.TravelApp && typeof window.TravelApp.isReady === 'function') {
+                checkReady();
+            } else {
+                console.warn('⚠️ TravelApp not properly initialized, retrying...');
+                setTimeout(checkReady, 1000); // Fallback delay
+            }
+        }, 500);
 
     } catch (error) {
         console.error('❌ Failed to load application module:', error);

@@ -27,6 +27,9 @@ export class ViewManager extends EventManager {
         this.maxHistorySize = 50;
 
         this.container = null;
+        this.activeElements = new Set(); // Track active view elements
+        this.animationQueue = []; // Queue for sequential animations
+
         this.init();
     }
 
@@ -115,6 +118,45 @@ export class ViewManager extends EventManager {
                 transform: translateX(-100%);
             }
 
+            /* Animation variants */
+            .view-container.slide-left .view.entering {
+                transform: translateX(100%);
+            }
+
+            .view-container.slide-left .view.exiting.inactive {
+                transform: translateX(-100%);
+            }
+
+            .view-container.slide-right .view.entering {
+                transform: translateX(-100%);
+            }
+
+            .view-container.slide-right .view.exiting.inactive {
+                transform: translateX(100%);
+            }
+
+            .view-container.fade .view {
+                transform: none;
+            }
+
+            .view-container.fade .view.entering {
+                opacity: 0;
+            }
+
+            .view-container.fade .view.exiting.inactive {
+                opacity: 0;
+            }
+
+            .view-container.scale .view.entering {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            .view-container.scale .view.exiting.inactive {
+                transform: scale(1.1);
+                opacity: 0;
+            }
+
             .view-loading {
                 display: flex;
                 align-items: center;
@@ -166,45 +208,6 @@ export class ViewManager extends EventManager {
             .breadcrumb-separator {
                 color: #cbd5e0;
             }
-
-            /* Animation variants */
-            .view-container.slide-left .view.entering {
-                transform: translateX(100%);
-            }
-
-            .view-container.slide-left .view.exiting.inactive {
-                transform: translateX(-100%);
-            }
-
-            .view-container.slide-right .view.entering {
-                transform: translateX(-100%);
-            }
-
-            .view-container.slide-right .view.exiting.inactive {
-                transform: translateX(100%);
-            }
-
-            .view-container.fade .view {
-                transform: none;
-            }
-
-            .view-container.fade .view.entering {
-                opacity: 0;
-            }
-
-            .view-container.fade .view.exiting.inactive {
-                opacity: 0;
-            }
-
-            .view-container.scale .view.entering {
-                transform: scale(0.9);
-                opacity: 0;
-            }
-
-            .view-container.scale .view.exiting.inactive {
-                transform: scale(1.1);
-                opacity: 0;
-            }
         `;
 
         document.head.appendChild(style);
@@ -217,7 +220,8 @@ export class ViewManager extends EventManager {
         // Browser back/forward buttons
         if (this.options.historyEnabled) {
             window.addEventListener('popstate', (e) => {
-                if (e.state && e.state.view) {
+                // Validate state to prevent infinite loops
+                if (e.state && e.state.view && typeof e.state.view === 'string' && this.hasView(e.state.view)) {
                     this.navigateTo(e.state.view, { replaceHistory: true });
                 }
             });
@@ -260,6 +264,7 @@ export class ViewManager extends EventManager {
             breadcrumbs: view.breadcrumbs || null,
             element: null,
             lastRendered: null,
+            eventListeners: new Map(),
             ...view
         });
 
@@ -330,8 +335,8 @@ export class ViewManager extends EventManager {
             // Add to view history
             this.addToViewHistory(viewName);
 
-            // Show view
-            await this.showView(viewName, options);
+            // Show view with proper sequencing
+            await this.showViewSequenced(viewName, options);
 
             // Update current view
             this.previousView = this.currentView;
@@ -374,12 +379,12 @@ export class ViewManager extends EventManager {
     }
 
     /**
-     * Show a view with animation
+     * Show view with proper animation sequencing
      * @param {string} viewName - View name
      * @param {object} options - Show options
      * @returns {Promise} Show promise
      */
-    async showView(viewName, options = {}) {
+    async showViewSequenced(viewName, options = {}) {
         const view = this.views.get(viewName);
         const animationType = options.animation || 'slide-left';
 
@@ -394,32 +399,16 @@ export class ViewManager extends EventManager {
             this.container.className = `view-container ${animationType}`;
         }
 
-        // Hide current view
+        // Get current view element
         const currentElement = this.container.querySelector('.view.active');
+
+        // Step 1: Start hiding current view
         if (currentElement && this.options.animation) {
             currentElement.classList.add('exiting');
-
-            // Wait for animation to start
-            await Utils.delay(50);
-            currentElement.classList.add('inactive');
-
-            // Remove after animation
-            setTimeout(() => {
-                if (currentElement.parentNode) {
-                    currentElement.classList.remove('active', 'exiting', 'inactive');
-                    if (!this.views.get(currentElement.dataset.viewName)?.cache) {
-                        currentElement.remove();
-                    } else {
-                        currentElement.style.display = 'none';
-                    }
-                }
-            }, ANIMATION_DURATIONS.NORMAL);
-        } else if (currentElement) {
-            currentElement.classList.remove('active');
-            currentElement.style.display = 'none';
+            await Utils.delay(50); // Allow animation to start
         }
 
-        // Show new view
+        // Step 2: Prepare new view
         viewElement.style.display = 'block';
         viewElement.classList.add('view', 'entering');
         viewElement.dataset.viewName = viewName;
@@ -428,22 +417,80 @@ export class ViewManager extends EventManager {
             this.container.appendChild(viewElement);
         }
 
-        if (this.options.animation) {
-            // Trigger animation
-            await Utils.delay(50);
-            viewElement.classList.add('active');
+        this.activeElements.add(viewElement);
 
-            // Clean up animation classes
+        // Step 3: Start showing new view
+        if (this.options.animation) {
+            await Utils.delay(50); // Ensure DOM update
+            viewElement.classList.add('active');
+        } else {
+            viewElement.classList.add('active');
+        }
+
+        // Step 4: Complete hiding current view
+        if (currentElement) {
+            if (this.options.animation) {
+                currentElement.classList.add('inactive');
+
+                // Wait for animation to complete before cleanup
+                setTimeout(() => {
+                    this.cleanupViewElement(currentElement);
+                }, ANIMATION_DURATIONS.NORMAL);
+            } else {
+                this.cleanupViewElement(currentElement);
+            }
+        }
+
+        // Step 5: Clean up animation classes
+        if (this.options.animation) {
             setTimeout(() => {
                 viewElement.classList.remove('entering');
             }, ANIMATION_DURATIONS.NORMAL);
-        } else {
-            viewElement.classList.add('active');
         }
 
         // Update view reference
         view.element = viewElement;
         view.lastRendered = Date.now();
+    }
+
+    /**
+     * Clean up view element properly
+     * @param {HTMLElement} element - Element to clean up
+     */
+    cleanupViewElement(element) {
+        if (!element) return;
+
+        try {
+            // Remove from active elements tracking
+            this.activeElements.delete(element);
+
+            // Clean up event listeners
+            const viewName = element.dataset.viewName;
+            if (viewName) {
+                const view = this.views.get(viewName);
+                if (view && view.eventListeners) {
+                    view.eventListeners.forEach((handler, event) => {
+                        element.removeEventListener(event, handler);
+                    });
+                    view.eventListeners.clear();
+                }
+            }
+
+            // Remove CSS classes
+            element.classList.remove('active', 'exiting', 'inactive', 'entering');
+
+            // Hide or remove from DOM
+            const view = this.views.get(element.dataset.viewName);
+            if (view && view.cache) {
+                element.style.display = 'none';
+            } else {
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            }
+        } catch (error) {
+            console.error('Error cleaning up view element:', error);
+        }
     }
 
     /**
@@ -455,9 +502,8 @@ export class ViewManager extends EventManager {
     async renderView(view, options = {}) {
         try {
             // Show loading state
-            const loadingElement = this.createLoadingElement();
-
             if (view.element) {
+                const loadingElement = this.createLoadingElement();
                 view.element.innerHTML = '';
                 view.element.appendChild(loadingElement);
             }
@@ -564,10 +610,17 @@ export class ViewManager extends EventManager {
 
             if (crumb.view && index < breadcrumbs.length - 1) {
                 link.href = '#';
-                link.addEventListener('click', (e) => {
+                const handler = (e) => {
                     e.preventDefault();
                     this.navigateTo(crumb.view);
-                });
+                };
+                link.addEventListener('click', handler);
+
+                // Track event listener for cleanup
+                const view = this.views.get(crumb.view);
+                if (view && view.eventListeners) {
+                    view.eventListeners.set('click', handler);
+                }
             }
 
             element.appendChild(link);
@@ -582,13 +635,17 @@ export class ViewManager extends EventManager {
      * @param {object} options - Navigation options
      */
     updateHistory(viewName, options) {
-        const state = { view: viewName, options };
-        const url = `#${viewName}`;
+        try {
+            const state = { view: viewName, options };
+            const url = `#${viewName}`;
 
-        if (options.replaceHistory) {
-            history.replaceState(state, '', url);
-        } else {
-            history.pushState(state, '', url);
+            if (options.replaceHistory) {
+                history.replaceState(state, '', url);
+            } else {
+                history.pushState(state, '', url);
+            }
+        } catch (error) {
+            console.error('Error updating browser history:', error);
         }
     }
 
@@ -614,20 +671,24 @@ export class ViewManager extends EventManager {
      * @param {object} view - View configuration
      */
     updatePageMeta(view) {
-        // Update page title
-        if (view.title) {
-            document.title = `${view.title} - Travel Itinerary Manager`;
-        }
-
-        // Update meta description
-        if (view.description) {
-            let metaDescription = document.querySelector('meta[name="description"]');
-            if (!metaDescription) {
-                metaDescription = document.createElement('meta');
-                metaDescription.name = 'description';
-                document.head.appendChild(metaDescription);
+        try {
+            // Update page title
+            if (view.title) {
+                document.title = `${view.title} - Travel Itinerary Manager`;
             }
-            metaDescription.content = view.description;
+
+            // Update meta description
+            if (view.description) {
+                let metaDescription = document.querySelector('meta[name="description"]');
+                if (!metaDescription) {
+                    metaDescription = document.createElement('meta');
+                    metaDescription.name = 'description';
+                    document.head.appendChild(metaDescription);
+                }
+                metaDescription.content = view.description;
+            }
+        } catch (error) {
+            console.error('Error updating page meta:', error);
         }
     }
 
@@ -775,7 +836,9 @@ export class ViewManager extends EventManager {
         if (!view.element || !view.cache) {
             try {
                 await this.renderView(view, options);
-                view.element.style.display = 'none';
+                if (view.element) {
+                    view.element.style.display = 'none';
+                }
             } catch (error) {
                 console.error(`Error preloading view '${viewName}':`, error);
             }
@@ -787,11 +850,27 @@ export class ViewManager extends EventManager {
      * @param {object} view - View configuration
      */
     cleanupView(view) {
-        if (view.element && view.element.parentNode) {
-            view.element.parentNode.removeChild(view.element);
+        try {
+            // Clean up event listeners
+            if (view.eventListeners) {
+                view.eventListeners.clear();
+            }
+
+            // Remove from active elements
+            if (view.element) {
+                this.activeElements.delete(view.element);
+            }
+
+            // Remove from DOM
+            if (view.element && view.element.parentNode) {
+                view.element.parentNode.removeChild(view.element);
+            }
+
+            view.element = null;
+            view.lastRendered = null;
+        } catch (error) {
+            console.error('Error cleaning up view:', error);
         }
-        view.element = null;
-        view.lastRendered = null;
     }
 
     /**
@@ -844,19 +923,31 @@ export class ViewManager extends EventManager {
      * Dispose of view manager
      */
     dispose() {
-        // Clean up all views
-        this.views.forEach(view => this.cleanupView(view));
-        this.views.clear();
+        try {
+            // Clean up all views
+            this.views.forEach(view => this.cleanupView(view));
+            this.views.clear();
 
-        // Remove event listeners
-        this.removeAllListeners();
+            // Clean up active elements
+            this.activeElements.clear();
 
-        // Clear history
-        this.viewHistory = [];
+            // Clear animation queue
+            this.animationQueue = [];
 
-        // Reset state
-        this.currentView = null;
-        this.previousView = null;
-        this.isTransitioning = false;
+            // Remove event listeners
+            this.removeAllListeners();
+
+            // Clear history
+            this.viewHistory = [];
+
+            // Reset state
+            this.currentView = null;
+            this.previousView = null;
+            this.isTransitioning = false;
+
+            console.log('ViewManager disposed');
+        } catch (error) {
+            console.error('Error disposing ViewManager:', error);
+        }
     }
 }

@@ -135,7 +135,7 @@ export class Application extends EventManager {
             // Show welcome notification
             notificationService.success(
                 'Welcome to Travel Itinerary Manager! 🌍',
-                { duration: 3000 }
+                {duration: 3000}
             );
 
             console.log(`🌍 ${APP_CONFIG.name} v${APP_CONFIG.version} initialized successfully!`);
@@ -339,12 +339,12 @@ export class Application extends EventManager {
         if (!navigationItems) return;
 
         const navItems = [
-            { view: VIEWS.DASHBOARD, icon: '📊', label: 'Dashboard' },
-            { view: VIEWS.ITINERARY, icon: '📋', label: 'Itinerary' },
-            { view: VIEWS.TIMELINE, icon: '🕒', label: 'Timeline' }
+            {view: VIEWS.DASHBOARD, icon: '📊', label: 'Dashboard'},
+            {view: VIEWS.ITINERARY, icon: '📋', label: 'Itinerary'},
+            {view: VIEWS.TIMELINE, icon: '🕒', label: 'Timeline'}
         ];
 
-        navItems.innerHTML = '';
+        navigationItems.innerHTML = '';
         navItems.forEach(item => {
             const navElement = document.createElement('div');
             navElement.className = 'nav-item';
@@ -525,7 +525,7 @@ export class Application extends EventManager {
         ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
             document.addEventListener(event, () => {
                 this.updateLastActivity();
-            }, { passive: true });
+            }, {passive: true});
         });
     }
 
@@ -764,13 +764,13 @@ export class Application extends EventManager {
     handleSearch(searchTerm) {
         if (!this.dataManager) return;
 
-        this.dataManager.updateFilters({ search: searchTerm });
+        this.dataManager.updateFilters({search: searchTerm});
 
         if (searchTerm) {
             const count = this.dataManager.filteredActivities.length;
             notificationService.info(
                 `Found ${count} activities matching "${searchTerm}"`,
-                { duration: 2000 }
+                {duration: 2000}
             );
         }
     }
@@ -797,9 +797,9 @@ export class Application extends EventManager {
 
         // Update page title and subtitle
         const titles = {
-            [VIEWS.DASHBOARD]: { title: 'Dashboard', subtitle: 'Overview of your travel itinerary' },
-            [VIEWS.ITINERARY]: { title: 'Itinerary', subtitle: 'Detailed view of your activities' },
-            [VIEWS.TIMELINE]: { title: 'Timeline', subtitle: 'Chronological view of your journey' }
+            [VIEWS.DASHBOARD]: {title: 'Dashboard', subtitle: 'Overview of your travel itinerary'},
+            [VIEWS.ITINERARY]: {title: 'Itinerary', subtitle: 'Detailed view of your activities'},
+            [VIEWS.TIMELINE]: {title: 'Timeline', subtitle: 'Chronological view of your journey'}
         };
 
         const pageInfo = titles[activeView];
@@ -863,15 +863,15 @@ export class Application extends EventManager {
                     label: 'Transport',
                     type: 'select',
                     options: [
-                        { value: '', label: 'Select transport mode' },
-                        { value: 'Flight', label: '✈️ Flight' },
-                        { value: 'Train', label: '🚄 Train' },
-                        { value: 'Car', label: '🚗 Car' },
-                        { value: 'Bus', label: '🚌 Bus' },
-                        { value: 'Uber', label: '🚕 Uber/Taxi' },
-                        { value: 'Walking', label: '🚶 Walking' },
-                        { value: 'Auto', label: '🛺 Auto Rickshaw' },
-                        { value: 'Tube', label: '🚇 Tube/Metro' }
+                        {value: '', label: 'Select transport mode'},
+                        {value: 'Flight', label: '✈️ Flight'},
+                        {value: 'Train', label: '🚄 Train'},
+                        {value: 'Car', label: '🚗 Car'},
+                        {value: 'Bus', label: '🚌 Bus'},
+                        {value: 'Uber', label: '🚕 Uber/Taxi'},
+                        {value: 'Walking', label: '🚶 Walking'},
+                        {value: 'Auto', label: '🛺 Auto Rickshaw'},
+                        {value: 'Tube', label: '🚇 Tube/Metro'}
                     ]
                 },
                 {
@@ -880,8 +880,8 @@ export class Application extends EventManager {
                     type: 'select',
                     value: activity.booking,
                     options: [
-                        { value: 'FALSE', label: 'Not Booked' },
-                        { value: 'TRUE', label: 'Booked' }
+                        {value: 'FALSE', label: 'Not Booked'},
+                        {value: 'TRUE', label: 'Booked'}
                     ]
                 },
                 {
@@ -911,6 +911,7 @@ export class Application extends EventManager {
             onSubmit: async (data) => {
                 try {
                     await this.dataManager.updateActivity(activityId, data);
+                    notificationService.success('Activity updated successfully!');
                     return true; // Close modal
                 } catch (error) {
                     notificationService.error(error.message);
@@ -959,6 +960,7 @@ export class Application extends EventManager {
                 onConfirm: () => {
                     try {
                         this.dataManager.deleteActivity(activityId);
+                        notificationService.success('Activity deleted successfully!');
                     } catch (error) {
                         notificationService.error(error.message);
                     }
@@ -975,9 +977,12 @@ export class Application extends EventManager {
      */
     duplicateActivity(activityId) {
         try {
-            this.dataManager.duplicateActivity(activityId);
+            const duplicated = this.dataManager.duplicateActivity(activityId);
+            notificationService.success('Activity duplicated successfully!');
+            return duplicated;
         } catch (error) {
             notificationService.error(error.message);
+            return null;
         }
     }
 
@@ -1121,7 +1126,7 @@ export class Application extends EventManager {
 
         const content = document.createElement('div');
 
-        const { input, visual } = this.fileHandler.createFileInput(
+        const {input, visual} = this.fileHandler.createFileInput(
             content,
             (result, error) => {
                 if (error) {
@@ -1178,7 +1183,7 @@ export class Application extends EventManager {
      */
     handleImportData(importResult) {
         try {
-            const { activities, metadata } = importResult;
+            const {activities, metadata} = importResult;
 
             if (!activities || activities.length === 0) {
                 notificationService.warning('No activities found in the imported file');
@@ -1526,146 +1531,146 @@ export class Application extends EventManager {
 
         console.log('Application disposed');
     }
-}
 
-// /**
-//  * Edit activity
-//  * @param {string} activityId - Activity ID to edit
-//  */
-// editActivity(activityId) {
-//     const activity = this.dataManager.getActivityById(activityId);
-//     if (!activity) {
-//         notificationService.error('Activity not found');
-//         return;
-//     }
-//
-//     const modal = this.modals.get('activity');
-//     if (!modal) return;
-//
-//     modal.setTitle('Edit Activity');
-//
-//     const form = modal.createForm({
-//         fields: [
-//             {
-//                 name: 'activity',
-//                 label: 'Activity Name',
-//                 type: 'text',
-//                 required: true,
-//                 value: activity.activity
-//             },
-//             {
-//                 name: 'date',
-//                 label: 'Date',
-//                 type: 'date',
-//                 required: true,
-//                 value: activity.date
-//             },
-//             {
-//                 name: 'startTime',
-//                 label: 'Start Time',
-//                 type: 'time',
-//                 value: activity.startTime
-//             },
-//             {
-//                 name: 'endTime',
-//                 label: 'End Time',
-//                 type: 'time',
-//                 value: activity.endTime
-//             },
-//             {
-//                 name: 'startFrom',
-//                 label: 'From',
-//                 type: 'text',
-//                 value: activity.startFrom
-//             },
-//             {
-//                 name: 'reachTo',
-//                 label: 'To',
-//                 type: 'text',
-//                 value: activity.reachTo
-//             },
-//             {
-//                 name: 'transportMode',
-//                 label: 'Transport',
-//                 type: 'select',
-//                 value: activity.transportMode,
-//                 options: [
-//                     { value: '', label: 'Select transport mode' },
-//                     { value: 'Flight', label: '✈️ Flight' },
-//                     { value: 'Train', label: '🚄 Train' },
-//                     { value: 'Car', label: '🚗 Car' },
-//                     { value: 'Bus', label: '🚌 Bus' },
-//                     { value: 'Uber', label: '🚕 Uber/Taxi' },
-//                     { value: 'Walking', label: '🚶 Walking' },
-//                     { value: 'Auto', label: '🛺 Auto Rickshaw' },
-//                     { value: 'Tube', label: '🚇 Tube/Metro' }
-//                 ]
-//             },
-//             {
-//                 name: 'booking',
-//                 label: 'Booking Status',
-//                 type: 'select',
-//                 value: activity.booking,
-//                 options: [
-//                     { value: 'FALSE', label: 'Not Booked' },
-//                     { value: 'TRUE', label: 'Booked' }
-//                 ]
-//             },
-//             {
-//                 name: 'cost',
-//                 label: 'Cost ($)',
-//                 type: 'number',
-//                 min: 0,
-//                 step: 0.01,
-//                 value: activity.cost
-//             },
-//             {
-//                 name: 'additionalDetails',
-//                 label: 'Additional Details',
-//                 type: 'textarea',
-//                 fullWidth: true,
-//                 rows: 3,
-//                 value: activity.additionalDetails
-//             },
-//             {
-//                 name: 'accommodationDetails',
-//                 label: 'Accommodation',
-//                 type: 'text',
-//                 fullWidth: true,
-//                 value: activity.accommodationDetails
-//             }
-//         ],
-//         onSubmit: async (formData) => {
-//             try {
-//                 await this.dataManager.updateActivity(activityId, formData);
-//                 notificationService.success('Activity updated successfully');
-//                 modal.hide();
-//             } catch (error) {
-//                 notificationService.error('Failed to update activity');
-//                 console.error(error);
-//             }
-//         }
-//     });
-//
-//     modal.setContent(form);
-//     modal.setFooter([
-//         {
-//             text: 'Cancel',
-//             className: 'btn-secondary',
-//             onClick: () => true
-//         },
-//         {
-//             text: 'Update Activity',
-//             className: 'btn-primary',
-//             onClick: (e) => {
-//                 const form = modal.modal.querySelector('form');
-//                 if (form) {
-//                     form.dispatchEvent(new Event('submit'));
-//                 }
-//                 return false;
-//             }
-//         }
-//     ]);
-//
-//     modal.show();
-// }
+    /**
+     * Edit activity
+     * @param {string} activityId - Activity ID to edit
+     */
+    editActivity(activityId) {
+        const activity = this.dataManager.getActivityById(activityId);
+        if (!activity) {
+            notificationService.error('Activity not found');
+            return;
+        }
+
+        const modal = this.modals.get('activity');
+        if (!modal) return;
+
+        modal.setTitle('Edit Activity');
+
+        const form = modal.createForm({
+            fields: [
+                {
+                    name: 'activity',
+                    label: 'Activity Name',
+                    type: 'text',
+                    required: true,
+                    value: activity.activity
+                },
+                {
+                    name: 'date',
+                    label: 'Date',
+                    type: 'date',
+                    required: true,
+                    value: activity.date
+                },
+                {
+                    name: 'startTime',
+                    label: 'Start Time',
+                    type: 'time',
+                    value: activity.startTime
+                },
+                {
+                    name: 'endTime',
+                    label: 'End Time',
+                    type: 'time',
+                    value: activity.endTime
+                },
+                {
+                    name: 'startFrom',
+                    label: 'From',
+                    type: 'text',
+                    value: activity.startFrom
+                },
+                {
+                    name: 'reachTo',
+                    label: 'To',
+                    type: 'text',
+                    value: activity.reachTo
+                },
+                {
+                    name: 'transportMode',
+                    label: 'Transport',
+                    type: 'select',
+                    value: activity.transportMode,
+                    options: [
+                        {value: '', label: 'Select transport mode'},
+                        {value: 'Flight', label: '✈️ Flight'},
+                        {value: 'Train', label: '🚄 Train'},
+                        {value: 'Car', label: '🚗 Car'},
+                        {value: 'Bus', label: '🚌 Bus'},
+                        {value: 'Uber', label: '🚕 Uber/Taxi'},
+                        {value: 'Walking', label: '🚶 Walking'},
+                        {value: 'Auto', label: '🛺 Auto Rickshaw'},
+                        {value: 'Tube', label: '🚇 Tube/Metro'}
+                    ]
+                },
+                {
+                    name: 'booking',
+                    label: 'Booking Status',
+                    type: 'select',
+                    value: 'FALSE',
+                    options: [
+                        {value: 'FALSE', label: 'Not Booked'},
+                        {value: 'TRUE', label: 'Booked'}
+                    ]
+                },
+                {
+                    name: 'cost',
+                    label: 'Cost ($)',
+                    type: 'number',
+                    min: 0,
+                    step: 0.01,
+                    value: 0
+                },
+                {
+                    name: 'additionalDetails',
+                    label: 'Additional Details',
+                    type: 'textarea',
+                    fullWidth: true,
+                    rows: 3,
+                    value: ''
+                },
+                {
+                    name: 'accommodationDetails',
+                    label: 'Accommodation',
+                    type: 'text',
+                    fullWidth: true,
+                    value: ''
+                }
+            ],
+            onSubmit: async (data) => {
+                try {
+                    await this.dataManager.addActivity(data);
+                    notificationService.success('Activity added successfully!');
+                    return true; // Close modal
+                } catch (error) {
+                    notificationService.error(error.message);
+                    return false; // Keep modal open
+                }
+            }
+        });
+
+        modal.setContent(form);
+        modal.setFooter([
+            {
+                text: 'Cancel',
+                className: 'btn-secondary',
+                onClick: () => true
+            },
+            {
+                text: 'Add Activity',
+                className: 'btn-primary',
+                onClick: (e) => {
+                    const form = modal.modal.querySelector('form');
+                    if (form) {
+                        form.dispatchEvent(new Event('submit'));
+                    }
+                    return false;
+                }
+            }
+        ]);
+
+        modal.show();
+    }
+}
