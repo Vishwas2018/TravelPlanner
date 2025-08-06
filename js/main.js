@@ -67,7 +67,7 @@ class AppBootstrap {
             // Setup global error handlers
             this.setupGlobalErrorHandlers();
 
-            // Setup service worker
+            // Setup service worker (with error handling)
             this.setupServiceWorker();
 
             // Setup performance monitoring
@@ -352,7 +352,7 @@ class AppBootstrap {
     }
 
     /**
-     * Setup service worker
+     * Setup service worker with proper error handling
      */
     async setupServiceWorker() {
         if (!('serviceWorker' in navigator)) {
@@ -361,7 +361,15 @@ class AppBootstrap {
         }
 
         try {
-            const registration = await navigator.serviceWorker.register('/sw.js');
+            // Check if service worker file exists before registering
+            const swResponse = await fetch('/sw.js', { method: 'HEAD' }).catch(() => null);
+
+            if (!swResponse || !swResponse.ok) {
+                console.log('ℹ️ Service Worker file not found, skipping registration');
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.register('./sw.js');
             console.log('✅ Service Worker registered:', registration);
 
             // Listen for updates
@@ -392,6 +400,7 @@ class AppBootstrap {
 
         } catch (error) {
             console.warn('Service Worker registration failed:', error);
+            // Don't throw - this is not critical for the app to function
         }
     }
 

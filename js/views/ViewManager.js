@@ -16,6 +16,7 @@ export class ViewManager extends EventManager {
             defaultView: options.defaultView || VIEWS.DASHBOARD,
             animation: options.animation !== false,
             historyEnabled: options.historyEnabled !== false,
+            autoNavigate: options.autoNavigate !== false, // Add this option
             ...options
         };
 
@@ -48,8 +49,8 @@ export class ViewManager extends EventManager {
         this.setupContainer();
         this.setupEventListeners();
 
-        // Load default view
-        if (this.options.defaultView) {
+        // Only load default view if autoNavigate is enabled
+        if (this.options.autoNavigate && this.options.defaultView) {
             this.navigateTo(this.options.defaultView);
         }
     }

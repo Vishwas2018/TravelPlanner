@@ -182,7 +182,7 @@
                 // Check if sw.js exists before attempting to register
                 const response = await fetch('/sw.js', { method: 'HEAD' });
                 if (response.ok) {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    const registration = await navigator.serviceWorker.register('./sw.js');
                     console.log('✅ Service Worker registered successfully:', registration);
 
                     // Listen for updates

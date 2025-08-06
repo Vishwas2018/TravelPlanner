@@ -97,10 +97,11 @@ export class Application extends EventManager {
             // Setup UI FIRST
             this.setupUI();
 
-            // Create ViewManager AFTER UI exists
+            // Create ViewManager WITHOUT default view navigation
             this.viewManager = new ViewManager({
                 container: '#viewContainer',
-                defaultView: VIEWS.DASHBOARD
+                defaultView: VIEWS.DASHBOARD,
+                autoNavigate: false // Prevent auto navigation
             });
 
             // Connect services AFTER ViewManager exists
@@ -123,8 +124,8 @@ export class Application extends EventManager {
                 this.setupAutoSave();
             }
 
-            // Initialize from URL if available
-            this.viewManager.initFromURL();
+            // NOW navigate to default view after everything is set up
+            await this.viewManager.navigateTo(VIEWS.DASHBOARD);
 
             this.isInitialized = true;
             this.isLoading = false;
