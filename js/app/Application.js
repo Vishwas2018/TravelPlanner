@@ -879,7 +879,7 @@ export class Application extends EventManager {
                     name: 'booking',
                     label: 'Booking Status',
                     type: 'select',
-                    value: activity.booking,
+                    value: 'FALSE',
                     options: [
                         {value: 'FALSE', label: 'Not Booked'},
                         {value: 'TRUE', label: 'Booked'}
@@ -891,7 +891,7 @@ export class Application extends EventManager {
                     type: 'number',
                     min: 0,
                     step: 0.01,
-                    value: activity.cost
+                    value: 0
                 },
                 {
                     name: 'additionalDetails',
@@ -899,20 +899,20 @@ export class Application extends EventManager {
                     type: 'textarea',
                     fullWidth: true,
                     rows: 3,
-                    value: activity.additionalDetails
+                    value: ''
                 },
                 {
                     name: 'accommodationDetails',
                     label: 'Accommodation',
                     type: 'text',
                     fullWidth: true,
-                    value: activity.accommodationDetails
+                    value: ''
                 }
             ],
             onSubmit: async (data) => {
                 try {
-                    await this.dataManager.updateActivity(activityId, data);
-                    notificationService.success('Activity updated successfully!');
+                    await this.dataManager.addActivity(data);
+                    notificationService.success('Activity added successfully!');
                     return true; // Close modal
                 } catch (error) {
                     notificationService.error(error.message);
@@ -929,7 +929,7 @@ export class Application extends EventManager {
                 onClick: () => true
             },
             {
-                text: 'Update Activity',
+                text: 'Add Activity',
                 className: 'btn-primary',
                 onClick: (e) => {
                     const form = modal.modal.querySelector('form');
