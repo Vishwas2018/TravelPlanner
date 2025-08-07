@@ -1,6 +1,6 @@
 /**
- * Travel Itinerary Manager - Main Entry Point
- * Initializes and bootstraps the application
+ * Travel Itinerary Manager - Main Entry Point with Global Handlers
+ * Initializes and bootstraps the application with proper global function handlers
  */
 
 import { Application } from './app/Application.js';
@@ -61,6 +61,9 @@ class AppBootstrap {
             // Make app globally accessible
             window.app = this.app;
 
+            // Setup global handlers for activity actions
+            this.setupGlobalHandlers();
+
             this.isInitialized = true;
             console.log('✅ Application initialized successfully');
 
@@ -87,6 +90,100 @@ class AppBootstrap {
             }
 
             this.showInitializationError(error);
+        }
+    }
+
+    /**
+     * Setup global handlers for activity actions
+     */
+    setupGlobalHandlers() {
+        // Global handler for editing activities
+        window.handleEditActivity = async (activityId) => {
+            try {
+                if (this.app && this.app.editActivity) {
+                    await this.app.editActivity(activityId);
+                    // Auto-refresh the current view after editing
+                    if (this.app.viewManager) {
+                        await this.app.viewManager.refresh();
+                    }
+                } else {
+                    console.error('App or editActivity method not available');
+                }
+            } catch (error) {
+                console.error('Error editing activity:', error);
+                this.showNotification('Failed to edit activity', 'error');
+            }
+        };
+
+        // Global handler for deleting activities
+        window.handleDeleteActivity = async (activityId) => {
+            try {
+                if (this.app && this.app.deleteActivity) {
+                    await this.app.deleteActivity(activityId);
+                    // Auto-refresh the current view after deletion
+                    if (this.app.viewManager) {
+                        await this.app.viewManager.refresh();
+                    }
+                } else {
+                    console.error('App or deleteActivity method not available');
+                }
+            } catch (error) {
+                console.error('Error deleting activity:', error);
+                this.showNotification('Failed to delete activity', 'error');
+            }
+        };
+
+        // Global handler for duplicating activities
+        window.handleDuplicateActivity = async (activityId) => {
+            try {
+                if (this.app && this.app.duplicateActivity) {
+                    await this.app.duplicateActivity(activityId);
+                    // Auto-refresh the current view after duplication
+                    if (this.app.viewManager) {
+                        await this.app.viewManager.refresh();
+                    }
+                } else {
+                    console.error('App or duplicateActivity method not available');
+                }
+            } catch (error) {
+                console.error('Error duplicating activity:', error);
+                this.showNotification('Failed to duplicate activity', 'error');
+            }
+        };
+
+        // Global handler for downloading template
+        window.downloadTemplate = () => {
+            try {
+                if (this.app && this.app.downloadTemplate) {
+                    this.app.downloadTemplate();
+                } else {
+                    console.error('App or downloadTemplate method not available');
+                }
+            } catch (error) {
+                console.error('Error downloading template:', error);
+                this.showNotification('Failed to download template', 'error');
+            }
+        };
+
+        console.log('✅ Global handlers set up successfully');
+    }
+
+    /**
+     * Show notification helper
+     */
+    showNotification(message, type = 'info') {
+        try {
+            // Try to use the notification service if available
+            if (window.app && window.app.isReady()) {
+                import('./services/NotificationService.js').then(({ notificationService }) => {
+                    notificationService[type](message);
+                });
+            } else {
+                // Fallback to console
+                console[type === 'error' ? 'error' : 'log'](message);
+            }
+        } catch (error) {
+            console.error('Failed to show notification:', error);
         }
     }
 
@@ -364,7 +461,6 @@ class AppBootstrap {
             // Check if service worker file exists before registering
             const response = await fetch('./sw.js', { method: 'HEAD' });
 
-            // Fix: Changed swResponse to response
             if (!response || !response.ok) {
                 console.log('ℹ️ Service Worker file not found, skipping registration');
                 return;
@@ -740,24 +836,5 @@ window.addEventListener('load', () => {
         }
     }, 100);
 });
-
-
-window.handleEditActivity = function(id) {
-    if (window.app && window.app.editActivity) {
-        window.app.editActivity(id);
-    }
-};
-
-window.handleDeleteActivity = function(id) {
-    if (window.app && window.app.deleteActivity) {
-        window.app.deleteActivity(id);
-    }
-};
-
-window.handleDuplicateActivity = function(id) {
-    if (window.app && window.app.duplicateActivity) {
-        window.app.duplicateActivity(id);
-    }
-};
 
 export default bootstrap;

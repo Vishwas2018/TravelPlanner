@@ -1,6 +1,6 @@
 /**
  * Travel Itinerary Manager - Fixed ItineraryView
- * Displays activities grouped by date with detailed information
+ * Displays activities grouped by date with detailed information and working edit/delete functions
  */
 
 import { Utils } from '../core/utils.js';
@@ -12,10 +12,9 @@ export class ItineraryView {
     }
 
     /**
-     * Render itinerary view - FIXED: Use correct data source
+     * Render itinerary view
      */
     render() {
-        // FIXED: Use filteredActivities or fallback to all activities
         const activities = this.dataManager.filteredActivities || this.dataManager.activities || [];
 
         if (activities.length === 0) {
@@ -47,7 +46,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render view controls - FIXED: Better onclick handlers
+     * Render view controls
      */
     renderViewControls() {
         return `
@@ -56,11 +55,11 @@ export class ItineraryView {
                     <h2 class="section-title">Travel Itinerary</h2>
                     <div class="view-toggles">
                         <button class="view-toggle ${this.viewMode === 'grouped' ? 'active' : ''}" 
-                                onclick="window.app?.setItineraryViewMode('grouped')">
+                                onclick="window.app?.setItineraryViewMode?.('grouped')">
                             📅 By Date
                         </button>
                         <button class="view-toggle ${this.viewMode === 'list' ? 'active' : ''}" 
-                                onclick="window.app?.setItineraryViewMode('list')">
+                                onclick="window.app?.setItineraryViewMode?.('list')">
                             📋 List View
                         </button>
                     </div>
@@ -110,7 +109,7 @@ export class ItineraryView {
     }
 
     /**
-     * Render list view - FIXED: Proper table structure and data display
+     * Render list view
      */
     renderListView(activities) {
         return `
@@ -136,50 +135,56 @@ export class ItineraryView {
     }
 
     /**
-     * Render activity card - FIXED: Safe onclick handlers
+     * Render activity card with working edit/delete buttons
      */
     renderActivityCard(activity) {
         return `
-        <div class="activity-card" data-activity-id="${activity.id}">
-            <div class="activity-header">
-                <div class="activity-main">
-                    <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
-                    <div class="activity-time">
-                        ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time set'}
-                        ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
-                        ${activity.getDuration() ? ` (${activity.getFormattedDuration()})` : ''}
+            <div class="activity-card" data-activity-id="${activity.id}">
+                <div class="activity-header">
+                    <div class="activity-main">
+                        <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
+                        <div class="activity-time">
+                            ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time set'}
+                            ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
+                            ${activity.getDuration() ? ` (${activity.getFormattedDuration()})` : ''}
+                        </div>
+                    </div>
+                    <div class="activity-actions">
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="window.handleEditActivity('${activity.id}')" 
+                                title="Edit activity">
+                            ✏️
+                        </button>
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="window.handleDuplicateActivity('${activity.id}')" 
+                                title="Duplicate activity">
+                            📋
+                        </button>
+                        <button class="btn btn-sm btn-danger" 
+                                onclick="window.handleDeleteActivity('${activity.id}')" 
+                                title="Delete activity">
+                            🗑️
+                        </button>
                     </div>
                 </div>
-                <div class="activity-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="handleEditActivity('${activity.id}')" title="Edit activity">
-                        ✏️
-                    </button>
-                    <button class="btn btn-sm btn-secondary" onclick="handleDuplicateActivity('${activity.id}')" title="Duplicate activity">
-                        📋
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="handleDeleteActivity('${activity.id}')" title="Delete activity">
-                        🗑️
-                    </button>
-                </div>
+                
+                ${this.renderActivityDetails(activity)}
+                
+                ${activity.additionalDetails ? `
+                    <div class="activity-notes">
+                        <div class="notes-label">📝 Notes:</div>
+                        <div class="notes-content">${Utils.escapeHtml(activity.additionalDetails)}</div>
+                    </div>
+                ` : ''}
+                
+                ${activity.accommodationDetails ? `
+                    <div class="activity-accommodation">
+                        <div class="accommodation-label">🏨 Accommodation:</div>
+                        <div class="accommodation-content">${Utils.escapeHtml(activity.accommodationDetails)}</div>
+                    </div>
+                ` : ''}
             </div>
-            
-            ${this.renderActivityDetails(activity)}
-            
-            ${activity.additionalDetails ? `
-                <div class="activity-notes">
-                    <div class="notes-label">📝 Notes:</div>
-                    <div class="notes-content">${Utils.escapeHtml(activity.additionalDetails)}</div>
-                </div>
-            ` : ''}
-            
-            ${activity.accommodationDetails ? `
-                <div class="activity-accommodation">
-                    <div class="accommodation-label">🏨 Accommodation:</div>
-                    <div class="accommodation-content">${Utils.escapeHtml(activity.accommodationDetails)}</div>
-                </div>
-            ` : ''}
-        </div>
-    `;
+        `;
     }
 
     /**
@@ -254,27 +259,75 @@ export class ItineraryView {
     }
 
     /**
-     * Render activity table row - FIXED: Safe onclick handlers
+     * Render activity table row
      */
     renderActivityRow(activity) {
         return `
-        <div class="table-row" data-activity-id="${activity.id}">
-            <!-- ... other columns ... -->
-            <div class="col-actions">
-                <div class="action-buttons">
-                    <button class="btn btn-sm btn-secondary" onclick="handleEditActivity('${activity.id}')" title="Edit">
-                        ✏️
-                    </button>
-                    <button class="btn btn-sm btn-secondary" onclick="handleDuplicateActivity('${activity.id}')" title="Duplicate">
-                        📋
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="handleDeleteActivity('${activity.id}')" title="Delete">
-                        🗑️
-                    </button>
+            <div class="table-row" data-activity-id="${activity.id}">
+                <div class="col-activity">
+                    <div class="activity-name">${Utils.escapeHtml(activity.activity)}</div>
+                    <div class="activity-category">${Utils.capitalize(activity.category || 'other')}</div>
+                </div>
+                
+                <div class="col-date">
+                    <div class="date">${Utils.formatDate(activity.date, { month: 'short', day: 'numeric' })}</div>
+                    <div class="time">
+                        ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time'}
+                        ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
+                    </div>
+                </div>
+                
+                <div class="col-location">
+                    <div class="location">
+                        ${activity.startFrom || activity.reachTo ?
+            `${activity.startFrom || ''} ${activity.startFrom && activity.reachTo ? '→' : ''} ${activity.reachTo || ''}`.trim() :
+            '<span class="text-muted">No location</span>'
+        }
+                    </div>
+                </div>
+                
+                <div class="col-transport">
+                    <div class="transport">
+                        ${activity.transportMode ?
+            `${Utils.getTransportIcon(activity.transportMode)} ${activity.transportMode}` :
+            '<span class="text-muted">No transport</span>'
+        }
+                    </div>
+                </div>
+                
+                <div class="col-cost">
+                    <div class="cost-display">
+                        ${activity.cost > 0 ? Utils.formatCurrency(activity.cost) : '<span class="text-muted">Free</span>'}
+                    </div>
+                </div>
+                
+                <div class="col-status">
+                    <span class="badge ${activity.isBooked() ? 'badge-success' : 'badge-warning'}">
+                        ${activity.isBooked() ? 'Booked' : 'Not Booked'}
+                    </span>
+                </div>
+                
+                <div class="col-actions">
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="window.handleEditActivity('${activity.id}')" 
+                                title="Edit">
+                            ✏️
+                        </button>
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="window.handleDuplicateActivity('${activity.id}')" 
+                                title="Duplicate">
+                            📋
+                        </button>
+                        <button class="btn btn-sm btn-danger" 
+                                onclick="window.handleDeleteActivity('${activity.id}')" 
+                                title="Delete">
+                            🗑️
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
     }
 
     /**
@@ -330,7 +383,7 @@ export class ItineraryView {
     }
 
     /**
-     * Set view mode - FIXED
+     * Set view mode
      */
     setViewMode(mode) {
         if (mode === 'grouped' || mode === 'list') {

@@ -1,5 +1,5 @@
 /**
- * Travel Itinerary Manager - Main Application (Fixed & Refined)
+ * Travel Itinerary Manager - Main Application (FIXED)
  * Orchestrates all components and manages application lifecycle
  */
 
@@ -94,6 +94,9 @@ export class Application extends EventManager {
             this.loadThemePreference();
             this.registerViews();
 
+            // FIXED: Setup global handlers BEFORE loading data
+            this.setupGlobalHandlers();
+
             // Load data and setup auto-save
             await this.loadInitialData();
 
@@ -121,6 +124,50 @@ export class Application extends EventManager {
             this.isLoading = false;
             this.handleInitializationError(error);
         }
+    }
+
+    /**
+     * FIXED: Setup global handlers that can be called from HTML onclick attributes
+     */
+    setupGlobalHandlers() {
+        // Make functions globally available with proper error handling
+        window.handleEditActivity = (id) => {
+            try {
+                this.editActivity(id);
+            } catch (error) {
+                this.handleGlobalError(error, 'Edit activity');
+            }
+        };
+
+        window.handleDeleteActivity = (id) => {
+            try {
+                this.deleteActivity(id);
+            } catch (error) {
+                this.handleGlobalError(error, 'Delete activity');
+            }
+        };
+
+        window.handleDuplicateActivity = (id) => {
+            try {
+                this.duplicateActivity(id);
+            } catch (error) {
+                this.handleGlobalError(error, 'Duplicate activity');
+            }
+        };
+
+        // Download template function
+        window.downloadTemplate = () => {
+            try {
+                this.downloadTemplate();
+            } catch (error) {
+                this.handleGlobalError(error, 'Download template');
+            }
+        };
+
+        // Make app instance globally available
+        window.app = this;
+
+        console.log('✅ Global handlers registered successfully');
     }
 
     /**
@@ -889,12 +936,11 @@ export class Application extends EventManager {
     }
 
     /**
-     * Open add activity modal
+     * FIXED: Open add activity modal with proper form handling
      */
     openAddActivityModal() {
         try {
             const modal = this.getModal('activity');
-
             modal.setTitle('Add New Activity');
 
             const form = modal.createForm({
@@ -1023,7 +1069,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * Edit activity
+     * FIXED: Edit activity with proper error handling
      */
     editActivity(activityId) {
         try {
@@ -1166,7 +1212,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * Delete activity
+     * FIXED: Delete activity with proper confirmation
      */
     deleteActivity(activityId) {
         try {
@@ -1197,7 +1243,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * Duplicate activity
+     * FIXED: Duplicate activity with proper error handling
      */
     duplicateActivity(activityId) {
         try {
@@ -1385,7 +1431,7 @@ export class Application extends EventManager {
                         <li>Booking status should be TRUE or FALSE</li>
                     </ul>
                     <div style="margin-top: 1rem;">
-                        <button class="btn btn-sm btn-secondary" onclick="window.app?.downloadTemplate?.()">
+                        <button class="btn btn-sm btn-secondary" onclick="window.downloadTemplate?.()">
                             📥 Download Template
                         </button>
                     </div>

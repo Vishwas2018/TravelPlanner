@@ -1921,3 +1921,418 @@ body {
         margin-bottom: 1rem;
     }
 }
+
+/* Additional CSS fixes for Activity Cards and Itinerary View */
+
+/* Activity Notes and Accommodation Sections */
+.activity-notes,
+.activity-accommodation {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    background: var(--surface-alt);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--gray-300);
+}
+
+.notes-label,
+.accommodation-label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.notes-content,
+.accommodation-content {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Improved table responsive design */
+@media (max-width: 1024px) {
+    .activity-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .table-header,
+    .table-row {
+        display: flex;
+        min-width: 800px;
+        gap: var(--space-2);
+    }
+
+    .table-header > *,
+    .table-row > * {
+        flex: 1;
+        min-width: 100px;
+        padding: var(--space-2);
+    }
+
+    .col-activity {
+        min-width: 150px;
+        flex: 2;
+    }
+
+    .col-location {
+        min-width: 120px;
+        flex: 1.5;
+    }
+
+    .col-actions {
+        min-width: 120px;
+        flex: 1;
+    }
+}
+
+/* Mobile table layout */
+@media (max-width: 640px) {
+    .activity-table {
+        white-space: normal;
+    }
+
+    .table-header {
+        display: none;
+    }
+
+    .table-row {
+        display: block;
+        background: var(--surface);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        margin-bottom: var(--space-4);
+        min-width: auto;
+    }
+
+    .table-row > * {
+        display: block;
+        margin-bottom: var(--space-2);
+        padding: 0;
+        border-bottom: none;
+    }
+
+    .table-row > *:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: var(--font-size-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: var(--space-1);
+    }
+
+    .col-activity:before { content: "Activity"; }
+    .col-date:before { content: "Date & Time"; }
+    .col-location:before { content: "Location"; }
+    .col-transport:before { content: "Transport"; }
+    .col-cost:before { content: "Cost"; }
+    .col-status:before { content: "Status"; }
+    .col-actions:before { content: "Actions"; }
+}
+
+/* Enhanced activity card hover effects */
+.activity-card:hover {
+    border-color: var(--primary);
+    box-shadow:
+            var(--shadow-lg),
+            0 0 0 1px var(--primary-light);
+    transform: translateY(-2px);
+}
+
+/* Improved action button spacing and styling */
+.activity-actions {
+    display: flex;
+    gap: var(--space-1);
+    flex-shrink: 0;
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--space-1);
+    justify-content: flex-end;
+}
+
+.btn-sm {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+    border-radius: var(--radius);
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Better visual hierarchy for activity details */
+.activity-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+    padding: var(--space-3);
+    background: rgba(102, 126, 234, 0.02);
+    border-radius: var(--radius);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    padding: var(--space-1) 0;
+}
+
+.detail-icon {
+    color: var(--primary);
+    font-size: var(--font-size-base);
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 60px;
+}
+
+.detail-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Cost display enhancement */
+.cost-display {
+    font-weight: 600;
+    color: var(--success);
+    font-size: var(--font-size-base);
+}
+
+/* Date group visual improvements */
+.date-group {
+    margin-bottom: var(--space-8);
+    position: relative;
+}
+
+.date-group::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            var(--primary) 10%,
+            var(--primary) 90%,
+            transparent 100%
+    );
+    border-radius: var(--radius-full);
+}
+
+.date-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-6);
+    background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.05) 0%,
+            rgba(118, 75, 162, 0.05) 100%
+    );
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    margin-left: var(--space-4);
+    position: relative;
+}
+
+.date-header::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--space-4) - 1px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border-radius: 50%;
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.activity-list {
+    margin-left: var(--space-4);
+    padding-left: var(--space-4);
+}
+
+/* Loading states for activity cards */
+.activity-card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.activity-card.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-200);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+/* Improved view toggles */
+.view-toggles {
+    display: flex;
+    gap: 0;
+    background: var(--gray-100);
+    padding: var(--space-1);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+}
+
+.view-toggle {
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-radius: var(--radius);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: transparent;
+    color: var(--gray-600);
+    font-family: inherit;
+    position: relative;
+}
+
+.view-toggle:hover {
+    color: var(--gray-700);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.view-toggle.active {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+}
+
+/* Better empty state styling */
+.empty-state {
+    text-align: center;
+    padding: var(--space-12);
+    color: var(--text-secondary);
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    margin: var(--space-6);
+    border: 2px dashed var(--gray-200);
+}
+
+.empty-state h3 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+}
+
+.empty-state p {
+    margin-bottom: var(--space-6);
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+}
+
+/* Animation improvements */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.activity-card {
+    animation: slideInUp 0.3s ease-out;
+}
+
+.activity-card:nth-child(1) { animation-delay: 0.05s; }
+.activity-card:nth-child(2) { animation-delay: 0.1s; }
+.activity-card:nth-child(3) { animation-delay: 0.15s; }
+.activity-card:nth-child(4) { animation-delay: 0.2s; }
+.activity-card:nth-child(5) { animation-delay: 0.25s; }
+
+/* Dark theme adjustments */
+[data-theme="dark"] .activity-notes,
+[data-theme="dark"] .activity-accommodation {
+    background: var(--gray-750);
+    border-left-color: var(--gray-600);
+}
+
+[data-theme="dark"] .date-header {
+    background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.1) 0%,
+            rgba(118, 75, 162, 0.1) 100%
+    );
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="dark"] .activity-details {
+    background: rgba(102, 126, 234, 0.05);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+[data-theme="dark"] .empty-state {
+    background: var(--surface);
+    border-color: var(--gray-600);
+}
+
+/* Accessibility improvements */
+.btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.activity-card:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Print styles for activity cards */
+@media print {
+    .activity-actions,
+    .view-toggles {
+        display: none !important;
+    }
+
+    .activity-card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 1rem;
+        background: white !important;
+    }
+
+    .date-header {
+        background: #f5f5f5 !important;
+        border: 1px solid #ccc !important;
+    }
+}

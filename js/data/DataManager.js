@@ -1,5 +1,5 @@
 /**
- * Travel Itinerary Manager - Data Management
+ * Travel Itinerary Manager - Data Management (FIXED)
  * Handles all data operations, storage, filtering, and business logic
  */
 
@@ -354,21 +354,24 @@ export class DataManager extends EventManager {
     }
 
     /**
-     * Duplicate activity
+     * Get activity by ID - FIXED: Added missing method
+     * @param {string} id - Activity ID
+     * @returns {ActivityModel|null} Activity or null if not found
+     */
+    getActivityById(id) {
+        return this.activities.find(a => a.id === id) || null;
+    }
+
+    /**
+     * Duplicate activity - FIXED: Now uses proper getActivityById method
      * @param {string} id - Activity ID to duplicate
      * @returns {ActivityModel} Duplicated activity
      */
-    /**
-     * Fixed duplicateActivity method for DataManager.js
-     * Replace the existing duplicateActivity method with this version
-     */
-
     duplicateActivity(id) {
         const startTime = performance.now();
 
         try {
-            // Fix: Use activities array directly instead of getActivityById
-            const activity = this.activities.find(a => a.id === id);
+            const activity = this.getActivityById(id);
             if (!activity) {
                 throw new Error(ERROR_MESSAGES.ACTIVITY_NOT_FOUND);
             }
@@ -387,7 +390,7 @@ export class DataManager extends EventManager {
             this.updateStats('duplicate', performance.now() - startTime);
             return duplicated;
         } catch (error) {
-            this.handleGlobalError(error, 'Duplicate activity');
+            console.error('Failed to duplicate activity:', error);
             throw error;
         }
     }
@@ -446,15 +449,6 @@ export class DataManager extends EventManager {
         this.filters = { ...DEFAULT_FILTERS };
         this.applyFilters();
         this.emit(EVENTS.FILTER_APPLIED, this.filters);
-    }
-
-    /**
-     * Get activity by ID
-     * @param {string} id - Activity ID
-     * @returns {ActivityModel|null} Activity or null if not found
-     */
-    getActivityById(id) {
-        return this.activities.find(a => a.id === id) || null;
     }
 
     /**
