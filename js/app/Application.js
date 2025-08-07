@@ -1,5 +1,5 @@
 /**
- * Travel Itinerary Manager - Main Application (FIXED)
+ * Travel Itinerary Manager - Main Application (TIMING FIXED)
  * Orchestrates all components and manages application lifecycle
  */
 
@@ -60,7 +60,86 @@ export class Application extends EventManager {
         this.autoSaveTimer = null;
         this.cleanupTasks = new Set();
 
+        // CRITICAL FIX: Register global handlers immediately in constructor
+        this.registerGlobalHandlersSync();
+
         this.init();
+    }
+
+    /**
+     * CRITICAL FIX: Synchronously register global handlers before any async operations
+     */
+    registerGlobalHandlersSync() {
+        // Create placeholder functions that queue operations until app is ready
+        const operationQueue = [];
+        let isReady = false;
+
+        const createQueuedHandler = (operationName) => {
+            return (...args) => {
+                if (isReady && this.isInitialized) {
+                    // App is ready, execute immediately
+                    this.executeOperation(operationName, args);
+                } else {
+                    // Queue the operation
+                    operationQueue.push({ operation: operationName, args });
+                    console.log(`Queued ${operationName} operation until app ready`);
+                }
+            };
+        };
+
+        // Register all global handlers immediately
+        window.handleEditActivity = createQueuedHandler('editActivity');
+        window.handleDeleteActivity = createQueuedHandler('deleteActivity');
+        window.handleDuplicateActivity = createQueuedHandler('duplicateActivity');
+        window.downloadTemplate = createQueuedHandler('downloadTemplate');
+
+        // Make app instance available immediately
+        window.app = this;
+
+        // Process queued operations when app becomes ready
+        this.on(EVENTS.APP_READY, () => {
+            isReady = true;
+
+            // Process all queued operations
+            while (operationQueue.length > 0) {
+                const { operation, args } = operationQueue.shift();
+                try {
+                    this.executeOperation(operation, args);
+                } catch (error) {
+                    console.error(`Error executing queued ${operation}:`, error);
+                }
+            }
+
+            console.log('✅ Processed all queued operations');
+        });
+
+        console.log('✅ Global handlers registered synchronously');
+    }
+
+    /**
+     * Execute a queued operation with proper error handling
+     */
+    executeOperation(operationName, args) {
+        try {
+            switch (operationName) {
+                case 'editActivity':
+                    this.editActivity(...args);
+                    break;
+                case 'deleteActivity':
+                    this.deleteActivity(...args);
+                    break;
+                case 'duplicateActivity':
+                    this.duplicateActivity(...args);
+                    break;
+                case 'downloadTemplate':
+                    this.downloadTemplate(...args);
+                    break;
+                default:
+                    console.warn(`Unknown operation: ${operationName}`);
+            }
+        } catch (error) {
+            this.handleGlobalError(error, `Operation: ${operationName}`);
+        }
     }
 
     /**
@@ -94,9 +173,6 @@ export class Application extends EventManager {
             this.loadThemePreference();
             this.registerViews();
 
-            // FIXED: Setup global handlers BEFORE loading data
-            this.setupGlobalHandlers();
-
             // Load data and setup auto-save
             await this.loadInitialData();
 
@@ -124,50 +200,6 @@ export class Application extends EventManager {
             this.isLoading = false;
             this.handleInitializationError(error);
         }
-    }
-
-    /**
-     * FIXED: Setup global handlers that can be called from HTML onclick attributes
-     */
-    setupGlobalHandlers() {
-        // Make functions globally available with proper error handling
-        window.handleEditActivity = (id) => {
-            try {
-                this.editActivity(id);
-            } catch (error) {
-                this.handleGlobalError(error, 'Edit activity');
-            }
-        };
-
-        window.handleDeleteActivity = (id) => {
-            try {
-                this.deleteActivity(id);
-            } catch (error) {
-                this.handleGlobalError(error, 'Delete activity');
-            }
-        };
-
-        window.handleDuplicateActivity = (id) => {
-            try {
-                this.duplicateActivity(id);
-            } catch (error) {
-                this.handleGlobalError(error, 'Duplicate activity');
-            }
-        };
-
-        // Download template function
-        window.downloadTemplate = () => {
-            try {
-                this.downloadTemplate();
-            } catch (error) {
-                this.handleGlobalError(error, 'Download template');
-            }
-        };
-
-        // Make app instance globally available
-        window.app = this;
-
-        console.log('✅ Global handlers registered successfully');
     }
 
     /**
@@ -262,16 +294,26 @@ export class Application extends EventManager {
     }
 
     /**
-     * Handle global errors
+     * Handle global errors with improved UX
      */
     handleGlobalError(error, context = 'Unknown') {
         console.error(`Global error in ${context}:`, error);
 
         if (this.isInitialized) {
-            notificationService.error(
-                `Error in ${context}. Please try refreshing if issues persist.`,
-                { duration: 5000 }
-            );
+            // Show user-friendly error based on context
+            const errorMessages = {
+                'editActivity': 'Unable to edit activity. Please try again.',
+                'deleteActivity': 'Unable to delete activity. Please try again.',
+                'duplicateActivity': 'Unable to duplicate activity. Please try again.',
+                'downloadTemplate': 'Unable to download template. Please check your connection.',
+                'ViewManager update': 'Display update failed. Please refresh if issues persist.',
+                'Navigation update': 'Navigation error occurred. Please try again.'
+            };
+
+            const userMessage = errorMessages[context] ||
+                `Error in ${context}. Please try refreshing if issues persist.`;
+
+            notificationService.error(userMessage, { duration: 5000 });
         }
     }
 
@@ -936,7 +978,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * FIXED: Open add activity modal with proper form handling
+     * IMPROVED: Open add activity modal with better form handling
      */
     openAddActivityModal() {
         try {
@@ -956,7 +998,8 @@ export class Application extends EventManager {
                         name: 'date',
                         label: 'Date',
                         type: 'date',
-                        required: true
+                        required: true,
+                        value: new Date().toISOString().split('T')[0] // Default to today
                     },
                     {
                         name: 'startTime',
@@ -1033,7 +1076,6 @@ export class Application extends EventManager {
                 onSubmit: async (data) => {
                     try {
                         await this.dataManager.addActivity(data);
-                        notificationService.success('Activity added successfully!');
                         return true; // Close modal
                     } catch (error) {
                         notificationService.error(error.message);
@@ -1069,7 +1111,7 @@ export class Application extends EventManager {
     }
 
     /**
-     * FIXED: Edit activity with proper error handling
+     * IMPROVED: Edit activity with better error handling
      */
     editActivity(activityId) {
         try {
@@ -1176,7 +1218,6 @@ export class Application extends EventManager {
                 onSubmit: async (data) => {
                     try {
                         await this.dataManager.updateActivity(activityId, data);
-                        notificationService.success('Activity updated successfully!');
                         return true; // Close modal
                     } catch (error) {
                         notificationService.error(error.message);
@@ -1207,12 +1248,12 @@ export class Application extends EventManager {
 
             modal.show();
         } catch (error) {
-            this.handleGlobalError(error, 'Edit activity modal');
+            this.handleGlobalError(error, 'editActivity');
         }
     }
 
     /**
-     * FIXED: Delete activity with proper confirmation
+     * IMPROVED: Delete activity with proper confirmation
      */
     deleteActivity(activityId) {
         try {
@@ -1228,9 +1269,8 @@ export class Application extends EventManager {
                     onConfirm: () => {
                         try {
                             this.dataManager.deleteActivity(activityId);
-                            notificationService.success('Activity deleted successfully!');
                         } catch (error) {
-                            this.handleGlobalError(error, 'Delete activity');
+                            this.handleGlobalError(error, 'deleteActivity');
                         }
                     },
                     confirmText: 'Delete',
@@ -1238,12 +1278,12 @@ export class Application extends EventManager {
                 }
             );
         } catch (error) {
-            this.handleGlobalError(error, 'Delete activity');
+            this.handleGlobalError(error, 'deleteActivity');
         }
     }
 
     /**
-     * FIXED: Duplicate activity with proper error handling
+     * IMPROVED: Duplicate activity with proper error handling
      */
     duplicateActivity(activityId) {
         try {
@@ -1253,7 +1293,7 @@ export class Application extends EventManager {
             }
             return duplicated;
         } catch (error) {
-            this.handleGlobalError(error, 'Duplicate activity');
+            this.handleGlobalError(error, 'duplicateActivity');
             return null;
         }
     }
@@ -1495,7 +1535,7 @@ export class Application extends EventManager {
             this.fileHandler.downloadTemplate('excel');
             notificationService.success(SUCCESS_MESSAGES.TEMPLATE_DOWNLOADED);
         } catch (error) {
-            this.handleGlobalError(error, 'Download template');
+            this.handleGlobalError(error, 'downloadTemplate');
         }
     }
 
