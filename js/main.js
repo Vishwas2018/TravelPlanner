@@ -364,7 +364,8 @@ class AppBootstrap {
             // Check if service worker file exists before registering
             const response = await fetch('./sw.js', { method: 'HEAD' });
 
-            if (!swResponse || !swResponse.ok) {
+            // Fix: Changed swResponse to response
+            if (!response || !response.ok) {
                 console.log('ℹ️ Service Worker file not found, skipping registration');
                 return;
             }
@@ -739,5 +740,24 @@ window.addEventListener('load', () => {
         }
     }, 100);
 });
+
+
+window.handleEditActivity = function(id) {
+    if (window.app && window.app.editActivity) {
+        window.app.editActivity(id);
+    }
+};
+
+window.handleDeleteActivity = function(id) {
+    if (window.app && window.app.deleteActivity) {
+        window.app.deleteActivity(id);
+    }
+};
+
+window.handleDuplicateActivity = function(id) {
+    if (window.app && window.app.duplicateActivity) {
+        window.app.duplicateActivity(id);
+    }
+};
 
 export default bootstrap;

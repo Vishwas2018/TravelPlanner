@@ -831,6 +831,11 @@ export class Application extends EventManager {
 
         this.dataManager.updateFilters({ search: searchTerm });
 
+        // Fix: Ensure view updates after search
+        if (this.viewManager) {
+            this.viewManager.updateView();
+        }
+
         if (searchTerm) {
             const count = this.dataManager.filteredActivities.length;
             notificationService.info(

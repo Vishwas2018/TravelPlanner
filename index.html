@@ -10,9 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Travel Manager">
 
-    <!-- Fixed CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdnjs.cloudflare.com; worker-src 'self';">
-
     <title>Travel Itinerary Manager - Plan Your Perfect Journey</title>
 
     <!-- Preconnect to external resources -->
@@ -20,34 +17,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
-    <!-- DNS prefetch for performance -->
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-
-    <!-- Preload critical fonts -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style">
-
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Progressive Web App Manifest -->
-    <link rel="manifest" href="./manifest.json">
-
-    <!-- Fixed Favicon - Using simple data URI -->
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🌍</text></svg>">
 
-    <!-- Module preload for faster loading -->
-    <link rel="modulepreload" href="./js/main.js">
-
     <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <!-- Critical CSS for initial render -->
     <style>
-        /* Critical CSS for initial loading */
         body {
             margin: 0;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -115,7 +99,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Hide content until loaded */
         .app-content {
             opacity: 0;
             transition: opacity 300ms ease-in;
@@ -125,7 +108,6 @@
             opacity: 1;
         }
 
-        /* Error state styles */
         .error-container {
             display: flex;
             align-items: center;
@@ -170,7 +152,7 @@
     </div>
 </div>
 
-<!-- Application Content (populated by JavaScript) -->
+<!-- Application Content -->
 <div id="appContent" class="app-content">
     <!-- Application will be rendered here -->
 </div>
@@ -178,44 +160,88 @@
 <!-- Notification Container -->
 <div id="notificationContainer" class="notification-container"></div>
 
-<!-- Moved to external file for CSP compliance -->
-<script src="./js/init.js"></script>
-
-<!-- Main Application Script (ES Modules) -->
-<script type="module">
-    try {
-        // Dynamic import with error handling
-        const module = await import('./js/main.js');
-        console.log('✅ Application module loaded successfully');
-
-        // Improved ready check with validation
-        const checkReady = () => {
-            if (window.TravelApp?.isReady?.()) {
-                const loader = document.getElementById('initialLoader');
-                if (loader) {
-                    loader.classList.add('hidden');
-                    document.getElementById('appContent').classList.add('loaded');
+<!-- Initialize app after DOM and libraries are loaded -->
+<script>
+    // Wait for libraries to load
+    function waitForLibraries() {
+        return new Promise((resolve) => {
+            const checkLibraries = () => {
+                if (typeof XLSX !== 'undefined' && typeof Papa !== 'undefined') {
+                    console.log('✅ External libraries loaded');
+                    resolve();
+                } else {
+                    setTimeout(checkLibraries, 100);
                 }
-                console.log('✅ Application ready');
-            } else {
-                requestAnimationFrame(checkReady);
-            }
-        };
-
-        // Validate TravelApp exists before checking ready state
-        setTimeout(() => {
-            if (window.TravelApp && typeof window.TravelApp.isReady === 'function') {
-                checkReady();
-            } else {
-                console.warn('⚠️ TravelApp not properly initialized, retrying...');
-                setTimeout(checkReady, 1000); // Fallback delay
-            }
-        }, 500);
-
-    } catch (error) {
-        console.error('❌ Failed to load application module:', error);
-        showErrorFallback(`Module loading failed: ${error.message}`);
+            };
+            checkLibraries();
+        });
     }
+
+    // Initialize application
+    async function initializeApp() {
+        try {
+            console.log('🌍 Starting Travel Itinerary Manager...');
+
+            // Wait for libraries
+            await waitForLibraries();
+
+            // Load and initialize main module
+            const { default: bootstrap } = await import('./js/main.js');
+
+            // Make globally available
+            window.TravelApp = bootstrap;
+            window.app = bootstrap.getApp();
+
+            console.log('✅ Application loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Failed to initialize application:', error);
+            showErrorFallback(error.message);
+        }
+    }
+
+    // Error fallback
+    function showErrorFallback(message) {
+        const loader = document.getElementById('initialLoader');
+        const appContent = document.getElementById('appContent');
+
+        if (loader) loader.classList.add('hidden');
+
+        if (appContent) {
+            appContent.innerHTML = `
+                    <div class="error-container">
+                        <div class="error-content">
+                            <h1>❌ Application Error</h1>
+                            <p>${message}</p>
+                            <button class="error-button" onclick="location.reload()">
+                                🔄 Reload Application
+                            </button>
+                            <button class="error-button" onclick="localStorage.clear(); location.reload()">
+                                🗑️ Clear Data & Reload
+                            </button>
+                        </div>
+                    </div>
+                `;
+            appContent.classList.add('loaded');
+        }
+    }
+
+    // Start when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        initializeApp();
+    }
+
+    // Hide loader after timeout
+    setTimeout(() => {
+        const loader = document.getElementById('initialLoader');
+        if (loader && !loader.classList.contains('hidden')) {
+            loader.classList.add('hidden');
+            document.getElementById('appContent').classList.add('loaded');
+            console.warn('⚠️ Application load timeout');
+        }
+    }, 15000);
 </script>
 
 <!-- Fallback for browsers without ES module support -->

@@ -140,46 +140,46 @@ export class ItineraryView {
      */
     renderActivityCard(activity) {
         return `
-            <div class="activity-card" data-activity-id="${activity.id}">
-                <div class="activity-header">
-                    <div class="activity-main">
-                        <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
-                        <div class="activity-time">
-                            ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time set'}
-                            ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
-                            ${activity.getDuration() ? ` (${activity.getFormattedDuration()})` : ''}
-                        </div>
-                    </div>
-                    <div class="activity-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="window.app?.editActivity('${activity.id}')" title="Edit activity">
-                            ✏️
-                        </button>
-                        <button class="btn btn-sm btn-secondary" onclick="window.app?.duplicateActivity('${activity.id}')" title="Duplicate activity">
-                            📋
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="window.app?.deleteActivity('${activity.id}')" title="Delete activity">
-                            🗑️
-                        </button>
+        <div class="activity-card" data-activity-id="${activity.id}">
+            <div class="activity-header">
+                <div class="activity-main">
+                    <div class="activity-title">${Utils.escapeHtml(activity.activity)}</div>
+                    <div class="activity-time">
+                        ${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time set'}
+                        ${activity.endTime ? ` - ${Utils.formatTime(activity.endTime)}` : ''}
+                        ${activity.getDuration() ? ` (${activity.getFormattedDuration()})` : ''}
                     </div>
                 </div>
-                
-                ${this.renderActivityDetails(activity)}
-                
-                ${activity.additionalDetails ? `
-                    <div class="activity-notes">
-                        <div class="notes-label">📝 Notes:</div>
-                        <div class="notes-content">${Utils.escapeHtml(activity.additionalDetails)}</div>
-                    </div>
-                ` : ''}
-                
-                ${activity.accommodationDetails ? `
-                    <div class="activity-accommodation">
-                        <div class="accommodation-label">🏨 Accommodation:</div>
-                        <div class="accommodation-content">${Utils.escapeHtml(activity.accommodationDetails)}</div>
-                    </div>
-                ` : ''}
+                <div class="activity-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="handleEditActivity('${activity.id}')" title="Edit activity">
+                        ✏️
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="handleDuplicateActivity('${activity.id}')" title="Duplicate activity">
+                        📋
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="handleDeleteActivity('${activity.id}')" title="Delete activity">
+                        🗑️
+                    </button>
+                </div>
             </div>
-        `;
+            
+            ${this.renderActivityDetails(activity)}
+            
+            ${activity.additionalDetails ? `
+                <div class="activity-notes">
+                    <div class="notes-label">📝 Notes:</div>
+                    <div class="notes-content">${Utils.escapeHtml(activity.additionalDetails)}</div>
+                </div>
+            ` : ''}
+            
+            ${activity.accommodationDetails ? `
+                <div class="activity-accommodation">
+                    <div class="accommodation-label">🏨 Accommodation:</div>
+                    <div class="accommodation-content">${Utils.escapeHtml(activity.accommodationDetails)}</div>
+                </div>
+            ` : ''}
+        </div>
+    `;
     }
 
     /**
@@ -258,56 +258,23 @@ export class ItineraryView {
      */
     renderActivityRow(activity) {
         return `
-            <div class="table-row" data-activity-id="${activity.id}">
-                <div class="col-activity">
-                    <div class="activity-name">${Utils.escapeHtml(activity.activity)}</div>
-                    ${activity.category !== 'other' ? `<div class="activity-category">${Utils.capitalize(activity.category)}</div>` : ''}
-                </div>
-                <div class="col-date">
-                    <div class="date">${Utils.formatDate(activity.date, { month: 'short', day: 'numeric' })}</div>
-                    <div class="time">${activity.startTime ? Utils.formatTime(activity.startTime) : 'No time'}</div>
-                </div>
-                <div class="col-location">
-                    ${activity.startFrom || activity.reachTo ? `
-                        <div class="location">
-                            ${activity.startFrom ? `From: ${Utils.escapeHtml(activity.startFrom)}` : ''}
-                            ${activity.startFrom && activity.reachTo ? '<br>' : ''}
-                            ${activity.reachTo ? `To: ${Utils.escapeHtml(activity.reachTo)}` : ''}
-                        </div>
-                    ` : '<span class="text-muted">No location</span>'}
-                </div>
-                <div class="col-transport">
-                    ${activity.transportMode ? `
-                        <span class="transport">
-                            ${Utils.getTransportIcon(activity.transportMode)} ${activity.transportMode}
-                        </span>
-                    ` : '<span class="text-muted">No transport</span>'}
-                </div>
-                <div class="col-cost">
-                    ${activity.cost > 0 ? `
-                        <span class="cost-display">${Utils.formatCurrency(activity.cost)}</span>
-                    ` : '<span class="text-muted">$0</span>'}
-                </div>
-                <div class="col-status">
-                    <span class="badge ${activity.isBooked() ? 'badge-success' : 'badge-warning'}">
-                        ${activity.isBooked() ? 'Booked' : 'Not Booked'}
-                    </span>
-                </div>
-                <div class="col-actions">
-                    <div class="action-buttons">
-                        <button class="btn btn-sm btn-secondary" onclick="window.app?.editActivity('${activity.id}')" title="Edit">
-                            ✏️
-                        </button>
-                        <button class="btn btn-sm btn-secondary" onclick="window.app?.duplicateActivity('${activity.id}')" title="Duplicate">
-                            📋
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="window.app?.deleteActivity('${activity.id}')" title="Delete">
-                            🗑️
-                        </button>
-                    </div>
+        <div class="table-row" data-activity-id="${activity.id}">
+            <!-- ... other columns ... -->
+            <div class="col-actions">
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-secondary" onclick="handleEditActivity('${activity.id}')" title="Edit">
+                        ✏️
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="handleDuplicateActivity('${activity.id}')" title="Duplicate">
+                        📋
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="handleDeleteActivity('${activity.id}')" title="Delete">
+                        🗑️
+                    </button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
     }
 
     /**

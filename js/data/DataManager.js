@@ -387,7 +387,7 @@ export class DataManager extends EventManager {
             this.updateStats('duplicate', performance.now() - startTime);
             return duplicated;
         } catch (error) {
-            console.error('Failed to duplicate activity:', error);
+            this.handleGlobalError(error, 'Duplicate activity');
             throw error;
         }
     }

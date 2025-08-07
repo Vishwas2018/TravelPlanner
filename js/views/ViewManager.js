@@ -932,16 +932,10 @@ export class ViewManager extends EventManager {
             // Clean up active elements
             this.activeElements.clear();
 
-            // Clear animation queue
-            this.animationQueue = [];
-
-            // Remove event listeners
+            // Remove all event listeners
             this.removeAllListeners();
 
-            // Clear history
-            this.viewHistory = [];
-
-            // Reset state
+            // Clear references
             this.currentView = null;
             this.previousView = null;
             this.isTransitioning = false;
