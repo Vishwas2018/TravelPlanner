@@ -1,6 +1,6 @@
 /**
- * Travel Itinerary Manager - Fixed Main Application
- * Complete application with working edit/delete functionality
+ * Travel Itinerary Manager - Enhanced Application with Card Toggle Support
+ * Complete application with working edit/delete functionality and click-to-expand cards
  */
 
 import { DataManager } from '../data/DataManager.js';
@@ -32,7 +32,7 @@ export class Application {
             this.setupUI();
             this.registerViews();
             this.setupEventListeners();
-            this.registerGlobalHandlers(); // Fixed: Register handlers after dataManager is ready
+            this.registerGlobalHandlers();
 
             // Navigate to default view
             await this.navigateToView(VIEWS.DASHBOARD);
@@ -65,6 +65,18 @@ export class Application {
 
         window.downloadTemplate = () => {
             this.downloadTemplate();
+        };
+
+        // Enhanced card toggle function
+        window.toggleActivityCard = (activityId, viewType) => {
+            console.log('Toggle card called for activity:', activityId, 'in view:', viewType);
+
+            const view = this.views.get(this.currentView);
+            if (view && view.toggleCard) {
+                view.toggleCard(activityId);
+                // Re-render the current view to show/hide expanded state
+                this.updateCurrentView();
+            }
         };
 
         // Make app instance globally available

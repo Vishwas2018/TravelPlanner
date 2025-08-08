@@ -2481,3 +2481,574 @@ body {
         gap: 8px;
     }
 }
+
+/* Enhanced Activity Card Styles - Click to Expand with Complete Details */
+
+/* Base card styles - compact by default */
+.activity-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow:
+            0 1px 3px rgba(0, 0, 0, 0.05),
+            0 1px 2px rgba(0, 0, 0, 0.1);
+
+    /* Compact by default */
+    height: 80px;
+    display: flex;
+    align-items: center;
+
+    /* Gradient border effect */
+    background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+    linear-gradient(135deg, var(--primary), var(--secondary));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+}
+
+/* Dark theme cards */
+[data-theme="dark"] .activity-card {
+    background: rgba(30, 35, 48, 0.9);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+            0 1px 3px rgba(0, 0, 0, 0.2),
+            0 1px 2px rgba(0, 0, 0, 0.3);
+
+    background-image: linear-gradient(rgba(30, 35, 48, 0.9), rgba(30, 35, 48, 0.9)),
+    linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+/* Expanded state - triggered by click */
+.activity-card.expanded {
+    height: auto;
+    min-height: 200px;
+    transform: translateY(-2px) scale(1.01);
+    box-shadow:
+            0 12px 20px rgba(0, 0, 0, 0.08),
+            0 6px 6px rgba(0, 0, 0, 0.05),
+            0 0 0 1px rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.3);
+    z-index: 10;
+}
+
+[data-theme="dark"] .activity-card.expanded {
+    box-shadow:
+            0 12px 20px rgba(0, 0, 0, 0.3),
+            0 6px 6px rgba(0, 0, 0, 0.2),
+            0 0 0 1px rgba(102, 126, 234, 0.2);
+}
+
+/* Hover effect - subtle preview */
+.activity-card:not(.expanded):hover {
+    transform: translateY(-1px);
+    box-shadow:
+            0 8px 15px rgba(0, 0, 0, 0.06),
+            0 4px 6px rgba(0, 0, 0, 0.04);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+/* Card content layout */
+.activity-card-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Compact view - single row */
+.activity-card:not(.expanded) .activity-card-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Main info section */
+.activity-main-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Transport icon */
+.activity-transport-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+/* Activity title */
+.activity-title-compact {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+/* Expanded title */
+.activity-card.expanded .activity-title-compact {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+
+/* Time badge */
+.activity-time-badge {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--primary);
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+}
+
+[data-theme="dark"] .activity-time-badge {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+/* Status indicator */
+.activity-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.2);
+    animation: pulse-status 2s infinite;
+    flex-shrink: 0;
+}
+
+.activity-status-indicator.not-booked {
+    background: var(--warning);
+    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.2);
+}
+
+@keyframes pulse-status {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* Floating actions */
+.activity-floating-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 20;
+}
+
+.activity-card:hover .activity-floating-actions,
+.activity-card.expanded .activity-floating-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.floating-action-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .floating-action-btn {
+    background: rgba(30, 35, 48, 0.95);
+    color: var(--text-primary);
+}
+
+.floating-action-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.floating-action-btn.edit:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.floating-action-btn.duplicate:hover {
+    background: var(--info);
+    color: white;
+}
+
+.floating-action-btn.delete:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* Priority indicator */
+.activity-priority-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 2px 0 0 2px;
+    opacity: 0.6;
+}
+
+.activity-priority-indicator.high {
+    background: linear-gradient(135deg, var(--danger), #ff6b9d);
+}
+
+.activity-priority-indicator.low {
+    background: linear-gradient(135deg, var(--success), #4ecdc4);
+}
+
+/* Booking status chip */
+.booking-status-chip {
+    position: absolute;
+    top: -6px;
+    right: 80px;
+    background: var(--success);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 15;
+}
+
+.booking-status-chip.not-booked {
+    background: var(--warning);
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
+}
+
+.activity-card:hover .booking-status-chip,
+.activity-card.expanded .booking-status-chip {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Expanded content */
+.activity-expanded-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    transform: translateY(-10px);
+    opacity: 0;
+}
+
+.activity-expanded-content.visible {
+    max-height: 500px;
+    opacity: 1;
+    transform: translateY(0);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .activity-expanded-content.visible {
+    border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Complete details grid */
+.complete-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    border-left: 3px solid rgba(102, 126, 234, 0.3);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .detail-row {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.detail-row:hover {
+    background: rgba(102, 126, 234, 0.05);
+    border-left-color: var(--primary);
+}
+
+.detail-row.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 80px;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.detail-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+    line-height: 1.4;
+}
+
+/* Special styling for specific details */
+.activity-name-detail {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--primary);
+}
+
+.cost-highlight {
+    background: linear-gradient(135deg, rgba(72, 187, 120, 0.1), rgba(72, 187, 120, 0.05));
+    border: 1px solid rgba(72, 187, 120, 0.2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-weight: 700;
+    color: var(--success);
+    display: inline-block;
+}
+
+.booking-status.confirmed {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.booking-status.pending {
+    color: var(--warning);
+    font-weight: 700;
+}
+
+.booking-details {
+    background: rgba(102, 126, 234, 0.05);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-style: italic;
+    color: var(--primary);
+}
+
+/* Notes section */
+.notes-section {
+    background: rgba(118, 75, 162, 0.03);
+    border-left-color: var(--secondary);
+}
+
+.notes-content {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    padding: 8px 12px;
+    line-height: 1.5;
+    font-style: italic;
+    border-left: 2px solid var(--secondary);
+}
+
+[data-theme="dark"] .notes-content {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Timeline specific location styling */
+.timeline-location {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 12px;
+    border-left: 3px solid var(--primary);
+    grid-column: 1 / -1;
+}
+
+.location-icon {
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.location-details {
+    flex: 1;
+}
+
+.location-from,
+.location-to {
+    font-size: 13px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+/* Animation for card entrance */
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.activity-card {
+    animation: cardSlideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Stagger animation for multiple cards */
+.activity-card:nth-child(1) { animation-delay: 0.05s; }
+.activity-card:nth-child(2) { animation-delay: 0.1s; }
+.activity-card:nth-child(3) { animation-delay: 0.15s; }
+.activity-card:nth-child(4) { animation-delay: 0.2s; }
+.activity-card:nth-child(5) { animation-delay: 0.25s; }
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .activity-card {
+        height: 70px;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+
+    .activity-card.expanded {
+        min-height: 180px;
+    }
+
+    .activity-transport-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .activity-title-compact {
+        font-size: 14px;
+    }
+
+    .complete-details-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .activity-floating-actions {
+        position: relative;
+        top: auto;
+        right: auto;
+        opacity: 1;
+        transform: none;
+        margin-top: 12px;
+        justify-content: center;
+    }
+
+    .floating-action-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+
+    .booking-status-chip {
+        position: relative;
+        top: auto;
+        right: auto;
+        transform: scale(1);
+        opacity: 1;
+        margin-top: 8px;
+        align-self: flex-start;
+    }
+
+    .detail-label {
+        min-width: 60px;
+        font-size: 12px;
+    }
+
+    .detail-value {
+        font-size: 13px;
+    }
+}
+
+/* Additional enhancements for better UX */
+.activity-card:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.activity-card[aria-expanded="true"] {
+    /* Additional styles for accessibility */
+    border-color: var(--primary);
+}
+
+/* Print styles */
+@media print {
+    .activity-card {
+        background: white !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        height: auto !important;
+    }
+
+    .activity-expanded-content {
+        max-height: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin-top: 16px !important;
+        padding-top: 16px !important;
+        border-top: 1px solid #ccc !important;
+    }
+
+    .activity-floating-actions {
+        display: none !important;
+    }
+}

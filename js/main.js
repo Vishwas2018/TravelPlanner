@@ -75,12 +75,7 @@ class AppBootstrap {
             const loadTime = (performance.now() - this.startTime).toFixed(2);
             console.log(`✅ Application initialized successfully in ${loadTime}ms`);
 
-            // Show welcome notification
-            setTimeout(() => {
-                if (typeof notificationService !== 'undefined') {
-                    notificationService.success('Welcome to Travel Itinerary Manager! 🌍');
-                }
-            }, 500);
+            // REMOVED: Duplicate welcome notification - now handled in Application.js
 
             return this.app;
 
