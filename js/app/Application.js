@@ -1,5 +1,6 @@
 /**
- * Travel Itinerary Manager - Optimized Main Application
+ * Travel Itinerary Manager - Fixed Main Application
+ * Complete application with working edit/delete functionality
  */
 
 import { DataManager } from '../data/DataManager.js';
@@ -16,24 +17,7 @@ export class Application {
         this.currentView = null;
         this.isInitialized = false;
 
-        this.registerGlobalHandlers();
         this.init();
-    }
-
-    registerGlobalHandlers() {
-        const createHandler = (method) => (...args) => {
-            if (this.isInitialized) {
-                this[method](...args);
-            } else {
-                setTimeout(() => this[method](...args), 100);
-            }
-        };
-
-        window.handleEditActivity = createHandler('editActivity');
-        window.handleDeleteActivity = createHandler('deleteActivity');
-        window.handleDuplicateActivity = createHandler('duplicateActivity');
-        window.downloadTemplate = createHandler('downloadTemplate');
-        window.app = this;
     }
 
     async init() {
@@ -48,6 +32,7 @@ export class Application {
             this.setupUI();
             this.registerViews();
             this.setupEventListeners();
+            this.registerGlobalHandlers(); // Fixed: Register handlers after dataManager is ready
 
             // Navigate to default view
             await this.navigateToView(VIEWS.DASHBOARD);
@@ -59,6 +44,33 @@ export class Application {
         } catch (error) {
             this.handleError(error, 'initialization');
         }
+    }
+
+    registerGlobalHandlers() {
+        // Make sure these are available globally for onclick handlers
+        window.handleEditActivity = (activityId) => {
+            console.log('Edit activity called with ID:', activityId);
+            this.editActivity(activityId);
+        };
+
+        window.handleDeleteActivity = (activityId) => {
+            console.log('Delete activity called with ID:', activityId);
+            this.deleteActivity(activityId);
+        };
+
+        window.handleDuplicateActivity = (activityId) => {
+            console.log('Duplicate activity called with ID:', activityId);
+            this.duplicateActivity(activityId);
+        };
+
+        window.downloadTemplate = () => {
+            this.downloadTemplate();
+        };
+
+        // Make app instance globally available
+        window.app = this;
+
+        console.log('✅ Global handlers registered');
     }
 
     showInitialLoading() {
@@ -295,15 +307,18 @@ export class Application {
     }
 
     editActivity(activityId) {
+        console.log('editActivity called with ID:', activityId);
         const activity = this.dataManager.getActivityById(activityId);
         if (!activity) {
             notificationService.error('Activity not found');
             return;
         }
+        console.log('Found activity for editing:', activity);
         this.showActivityModal(activity);
     }
 
     deleteActivity(activityId) {
+        console.log('deleteActivity called with ID:', activityId);
         const activity = this.dataManager.getActivityById(activityId);
         if (!activity) {
             notificationService.error('Activity not found');
@@ -311,14 +326,22 @@ export class Application {
         }
 
         if (confirm(`Are you sure you want to delete "${activity.activity}"?`)) {
-            this.dataManager.deleteActivity(activityId);
+            try {
+                this.dataManager.deleteActivity(activityId);
+                console.log('Activity deleted successfully');
+            } catch (error) {
+                console.error('Error deleting activity:', error);
+                notificationService.error('Failed to delete activity');
+            }
         }
     }
 
     duplicateActivity(activityId) {
+        console.log('duplicateActivity called with ID:', activityId);
         try {
             this.dataManager.duplicateActivity(activityId);
         } catch (error) {
+            console.error('Error duplicating activity:', error);
             notificationService.error(error.message);
         }
     }
@@ -423,12 +446,15 @@ export class Application {
 
         try {
             if (activityId) {
+                console.log('Updating activity with ID:', activityId, 'Data:', data);
                 this.dataManager.updateActivity(activityId, data);
             } else {
+                console.log('Adding new activity with data:', data);
                 this.dataManager.addActivity(data);
             }
             document.querySelector('.modal-overlay').remove();
         } catch (error) {
+            console.error('Error saving activity:', error);
             notificationService.error(error.message);
         }
     }
@@ -573,7 +599,7 @@ Hotel Check-in,2025-09-19,19:00,20:00,London Heathrow,Hotel London,Taxi,TRUE,150
         const newTheme = current === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('travel-app-theme', newTheme);
-        document.querySelector('.theme-icon').textContent = newTheme === 'light' ? '🌙' : '☀️';
+        document.querySelector('#themeToggle').textContent = newTheme === 'light' ? '🌙' : '☀️';
     }
 
     setItineraryViewMode(mode) {
