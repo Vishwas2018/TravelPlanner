@@ -1,5 +1,5 @@
 /**
- * Complete Views.js - All Views with Enhanced ItineraryView
+ * Complete Views.js - All Views with Enhanced ItineraryView - FIXED
  */
 
 import { Utils } from '../core/utils.js';
@@ -15,6 +15,11 @@ export class DashboardView {
         const stats = this.dataManager.getStatistics();
         const costBreakdown = this.dataManager.getCostBreakdown();
         const upcomingActivities = this.dataManager.getUpcomingActivities(7);
+
+        console.log('Dashboard rendering with:', {
+            totalActivities: stats.totalActivities,
+            upcomingCount: upcomingActivities.length
+        });
 
         return `
             <div class="dashboard-content">
@@ -251,7 +256,7 @@ export class DashboardView {
     }
 }
 
-// Enhanced Itinerary View
+// Enhanced Itinerary View - FIXED
 export class ItineraryView {
     constructor(dataManager) {
         this.dataManager = dataManager;
@@ -261,7 +266,15 @@ export class ItineraryView {
     }
 
     render() {
+        // Always get the latest filtered activities
         const activities = this.dataManager.filteredActivities || [];
+
+        console.log('ItineraryView rendering:', {
+            totalActivities: this.dataManager.activities?.length || 0,
+            filteredActivities: activities.length,
+            viewMode: this.viewMode
+        });
+
         if (activities.length === 0) {
             return this.renderEmptyState();
         }
@@ -308,8 +321,14 @@ export class ItineraryView {
     }
 
     renderGroupedView(activities) {
-        const groupedActivities = this.dataManager.getActivitiesByDate();
+        const groupedActivities = Utils.groupBy(activities, 'date');
         const sortedDates = Object.keys(groupedActivities).sort();
+
+        console.log('Grouped view:', { groupedActivities, sortedDates });
+
+        if (sortedDates.length === 0) {
+            return this.renderEmptyState();
+        }
 
         return `
             <div class="grouped-view">
@@ -343,7 +362,7 @@ export class ItineraryView {
         return `
             <div class="date-group-header">
                 <div>
-                    <h3 class="date-group-title">Day ${dayNumber} (${dayName} - ${formattedDate})</h3>
+                    <h3 class="date-group-title">Day ${dayNumber} - ${dayName}, ${formattedDate}</h3>
                     <p class="date-group-subtitle">${activities.length} activities planned</p>
                 </div>
                 <div class="date-group-stats">
@@ -689,7 +708,7 @@ export class ItineraryView {
     }
 }
 
-// Timeline View (unchanged)
+// Timeline View
 export class TimelineView {
     constructor(dataManager) {
         this.dataManager = dataManager;
@@ -697,7 +716,14 @@ export class TimelineView {
     }
 
     render() {
-        const activities = this.dataManager.filteredActivities;
+        // Get the latest filtered activities
+        const activities = this.dataManager.filteredActivities || [];
+
+        console.log('TimelineView rendering:', {
+            totalActivities: this.dataManager.activities?.length || 0,
+            filteredActivities: activities.length
+        });
+
         if (activities.length === 0) {
             return `
                 <div class="empty-state">

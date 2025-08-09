@@ -15,6 +15,7 @@ export class Application {
         this.views = new Map();
         this.currentView = null;
         this.isInitialized = false;
+        this.eventListenersRegistered = false; // Prevent duplicate listeners
 
         this.init();
     }
@@ -39,6 +40,7 @@ export class Application {
             this.isInitialized = true;
             this.hideInitialLoading();
 
+            // Single welcome notification
             notificationService.success('Welcome to Travel Itinerary Manager! 🌍');
         } catch (error) {
             this.handleError(error, 'initialization');
@@ -46,6 +48,10 @@ export class Application {
     }
 
     registerGlobalHandlers() {
+        // Prevent duplicate registration
+        if (window.globalHandlersRegistered) return;
+        window.globalHandlersRegistered = true;
+
         // Make sure these are available globally for onclick handlers
         window.handleEditActivity = (activityId) => {
             console.log('Edit activity called with ID:', activityId);
@@ -229,20 +235,35 @@ export class Application {
         };
 
         ['transportFilter', 'bookingFilter', 'startDateFilter', 'endDateFilter'].forEach(id => {
-            document.getElementById(id)?.addEventListener('change', updateFilters);
+            const element = document.getElementById(id);
+            if (element) {
+                // Remove any existing listeners first
+                element.removeEventListener('change', updateFilters);
+                element.addEventListener('change', updateFilters);
+            }
         });
 
-        document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
-            ['transportFilter', 'bookingFilter', 'startDateFilter', 'endDateFilter'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-            this.dataManager.resetFilters();
-            notificationService.info('Filters cleared');
+        const clearBtn = document.getElementById('clearFiltersBtn');
+        if (clearBtn) {
+            clearBtn.removeEventListener('click', this.handleClearFilters);
+            clearBtn.addEventListener('click', this.handleClearFilters.bind(this));
+        }
+    }
+
+    handleClearFilters() {
+        ['transportFilter', 'bookingFilter', 'startDateFilter', 'endDateFilter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
         });
+        this.dataManager.resetFilters();
+        notificationService.info('Filters cleared');
     }
 
     setupEventListeners() {
+        // Prevent duplicate event listener registration
+        if (this.eventListenersRegistered) return;
+        this.eventListenersRegistered = true;
+
         // Search
         const searchInput = document.getElementById('globalSearch');
         if (searchInput) {
@@ -253,16 +274,39 @@ export class Application {
         }
 
         // Action buttons
-        document.getElementById('addActivityBtn')?.addEventListener('click', () => this.openAddActivityModal());
-        document.getElementById('exportBtn')?.addEventListener('click', () => this.showExportModal());
-        document.getElementById('importBtn')?.addEventListener('click', () => this.showImportModal());
-        document.getElementById('themeToggle')?.addEventListener('click', () => this.toggleTheme());
+        const addBtn = document.getElementById('addActivityBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importBtn = document.getElementById('importBtn');
+        const themeBtn = document.getElementById('themeToggle');
 
-        // Data manager events
-        this.dataManager.on(EVENTS.DATA_UPDATED, () => this.updateCurrentView());
-        this.dataManager.on(EVENTS.ACTIVITY_ADDED, () => notificationService.success(SUCCESS_MESSAGES.ACTIVITY_ADDED));
-        this.dataManager.on(EVENTS.ACTIVITY_UPDATED, () => notificationService.success(SUCCESS_MESSAGES.ACTIVITY_UPDATED));
-        this.dataManager.on(EVENTS.ACTIVITY_DELETED, () => notificationService.success(SUCCESS_MESSAGES.ACTIVITY_DELETED));
+        if (addBtn) addBtn.addEventListener('click', () => this.openAddActivityModal());
+        if (exportBtn) exportBtn.addEventListener('click', () => this.showExportModal());
+        if (importBtn) importBtn.addEventListener('click', () => this.showImportModal());
+        if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
+
+        // Data manager events - Remove any existing listeners first
+        this.dataManager.removeAllListeners();
+        this.dataManager.on(EVENTS.DATA_UPDATED, () => {
+            console.log('Data updated event received');
+            this.updateCurrentView();
+        });
+        this.dataManager.on(EVENTS.ACTIVITY_ADDED, (activity) => {
+            console.log('Activity added event received:', activity);
+            notificationService.success(SUCCESS_MESSAGES.ACTIVITY_ADDED);
+            this.updateCurrentView(); // Ensure views refresh
+        });
+        this.dataManager.on(EVENTS.ACTIVITY_UPDATED, () => {
+            console.log('Activity updated event received');
+            notificationService.success(SUCCESS_MESSAGES.ACTIVITY_UPDATED);
+            this.updateCurrentView();
+        });
+        this.dataManager.on(EVENTS.ACTIVITY_DELETED, () => {
+            console.log('Activity deleted event received');
+            notificationService.success(SUCCESS_MESSAGES.ACTIVITY_DELETED);
+            this.updateCurrentView();
+        });
+
+        console.log('✅ Event listeners setup complete');
     }
 
     registerViews() {
@@ -276,28 +320,44 @@ export class Application {
 
         // Initialize enhanced itinerary view
         initializeItineraryView(itineraryView);
+
+        console.log('✅ Views registered:', Array.from(this.views.keys()));
     }
 
     async navigateToView(viewName) {
         if (this.currentView === viewName) return;
 
         const view = this.views.get(viewName);
-        if (!view) return;
+        if (!view) {
+            console.error('View not found:', viewName);
+            return;
+        }
 
         try {
+            console.log('Navigating to view:', viewName);
             const container = document.getElementById('viewContainer');
             if (!container) return;
+
+            // Get the latest data before rendering
+            const activities = this.dataManager.filteredActivities || this.dataManager.activities || [];
+            console.log(`Rendering ${viewName} with ${activities.length} activities`);
 
             container.innerHTML = view.render();
             this.currentView = viewName;
             this.updateNavigationState(viewName);
+
+            console.log(`✅ Successfully navigated to ${viewName}`);
         } catch (error) {
+            console.error(`Failed to navigate to ${viewName}:`, error);
             this.handleError(error, `navigation to ${viewName}`);
         }
     }
 
     updateCurrentView() {
+        console.log('Updating current view:', this.currentView);
         if (this.currentView) {
+            // Force a refresh of filtered activities
+            this.dataManager.applyFilters();
             this.navigateToView(this.currentView);
         }
     }
@@ -315,8 +375,10 @@ export class Application {
 
         const pageInfo = titles[activeView];
         if (pageInfo) {
-            document.getElementById('pageTitle').textContent = pageInfo.title;
-            document.getElementById('pageSubtitle').textContent = pageInfo.subtitle;
+            const titleEl = document.getElementById('pageTitle');
+            const subtitleEl = document.getElementById('pageSubtitle');
+            if (titleEl) titleEl.textContent = pageInfo.title;
+            if (subtitleEl) subtitleEl.textContent = pageInfo.subtitle;
         }
     }
 
@@ -370,6 +432,12 @@ export class Application {
 
         const isEdit = !!activity;
         const today = new Date().toISOString().split('T')[0];
+
+        // Remove any existing modal first
+        const existingModal = document.querySelector('.modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
 
         // Create modal overlay
         const modalOverlay = document.createElement('div');
@@ -536,11 +604,10 @@ export class Application {
             if (activityId && activityId !== '') {
                 console.log('Updating activity with ID:', activityId, 'Data:', data);
                 this.dataManager.updateActivity(activityId, data);
-                notificationService.success('Activity updated successfully!');
             } else {
                 console.log('Adding new activity with data:', data);
-                this.dataManager.addActivity(data);
-                notificationService.success('Activity added successfully!');
+                const newActivity = this.dataManager.addActivity(data);
+                console.log('New activity created:', newActivity);
             }
 
             // Close modal
@@ -548,6 +615,11 @@ export class Application {
             if (modal) {
                 modal.remove();
             }
+
+            // Force update current view to show new/updated activity
+            setTimeout(() => {
+                this.updateCurrentView();
+            }, 100);
 
             console.log('Activity saved successfully');
         } catch (error) {
@@ -565,11 +637,6 @@ export class Application {
             </div>
             <div class="modal-body">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <button class="export-option" onclick="app.exportData('excel')">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-                        <strong>Excel (.xlsx)</strong>
-                        <p>Best for spreadsheet applications</p>
-                    </button>
                     <button class="export-option" onclick="app.exportData('csv')">
                         <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
                         <strong>CSV</strong>
@@ -677,6 +744,7 @@ Hotel Check-in,2025-09-19,19:00,20:00,London Heathrow,Hotel London,Taxi,TRUE,150
                 const result = this.dataManager.importActivities(activities);
                 notificationService.success(`Imported ${result.imported} activities`);
                 document.querySelector('.modal-overlay').remove();
+                this.updateCurrentView();
             } catch (error) {
                 notificationService.error('Import failed: ' + error.message);
             }
@@ -753,9 +821,19 @@ Hotel Check-in,2025-09-19,19:00,20:00,London Heathrow,Hotel London,Taxi,TRUE,150
     }
 
     dispose() {
+        // Remove global handlers flag
+        window.globalHandlersRegistered = false;
+
         if (this.dataManager) {
             this.dataManager.dispose();
         }
         notificationService.dispose();
+
+        // Clear references
+        this.views.clear();
+        this.dataManager = null;
+        this.currentView = null;
+        this.isInitialized = false;
+        this.eventListenersRegistered = false;
     }
 }
