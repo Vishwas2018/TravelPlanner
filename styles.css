@@ -3849,3 +3849,627 @@ body {
         display: none !important;
     }
 }
+
+/* Enhanced Modal Styles with Modern Color Design */
+
+/* Modal Overlay with Gradient Background */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.15) 0%,
+    rgba(118, 75, 162, 0.15) 25%,
+    rgba(0, 0, 0, 0.6) 50%,
+    rgba(237, 137, 54, 0.15) 75%,
+    rgba(72, 187, 120, 0.15) 100%
+    );
+    backdrop-filter: blur(8px) saturate(180%);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: all 400ms cubic-bezier(0.23, 1, 0.32, 1);
+    animation: modalBackdropFadeIn 400ms ease-out;
+}
+
+@keyframes modalBackdropFadeIn {
+    from {
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(0px);
+    }
+    to {
+        background: linear-gradient(135deg,
+        rgba(102, 126, 234, 0.15) 0%,
+        rgba(118, 75, 162, 0.15) 25%,
+        rgba(0, 0, 0, 0.6) 50%,
+        rgba(237, 137, 54, 0.15) 75%,
+        rgba(72, 187, 120, 0.15) 100%
+        );
+        backdrop-filter: blur(8px) saturate(180%);
+    }
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Enhanced Modal Dialog with Modern Colors */
+.modal-dialog {
+    width: 100%;
+    max-width: 650px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.9) translateY(-20px);
+    transition: all 400ms cubic-bezier(0.23, 1, 0.32, 1);
+    animation: modalSlideIn 400ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.9) translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-overlay.active .modal-dialog {
+    transform: scale(1) translateY(0);
+}
+
+/* Beautiful Modal Content with Gradient Border */
+.modal-content {
+    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 20px;
+    box-shadow:
+            0 25px 50px -12px rgba(102, 126, 234, 0.25),
+            0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(102, 126, 234, 0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Dark theme modal content */
+[data-theme="dark"] .modal-content {
+    background: linear-gradient(145deg, #1e2332 0%, #252b3d 100%);
+    box-shadow:
+            0 25px 50px -12px rgba(102, 126, 234, 0.4),
+            0 20px 25px -5px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(102, 126, 234, 0.2);
+}
+
+/* Colorful gradient border effect */
+.modal-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: linear-gradient(135deg,
+    #667eea 0%,
+    #764ba2 25%,
+    #ed8936 50%,
+    #48bb78 75%,
+    #4299e1 100%
+    );
+    border-radius: inherit;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: xor;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    opacity: 0.6;
+    animation: gradientShift 8s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% {
+        background: linear-gradient(135deg,
+        #667eea 0%,
+        #764ba2 25%,
+        #ed8936 50%,
+        #48bb78 75%,
+        #4299e1 100%
+        );
+    }
+    50% {
+        background: linear-gradient(135deg,
+        #4299e1 0%,
+        #667eea 25%,
+        #48bb78 50%,
+        #ed8936 75%,
+        #764ba2 100%
+        );
+    }
+}
+
+/* Vibrant Modal Header */
+.modal-header {
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.08) 0%,
+    rgba(118, 75, 162, 0.08) 50%,
+    rgba(72, 187, 120, 0.08) 100%
+    );
+    border-radius: 20px 20px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .modal-header {
+    background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.15) 0%,
+    rgba(118, 75, 162, 0.15) 50%,
+    rgba(72, 187, 120, 0.15) 100%
+    );
+}
+
+/* Animated background pattern for header */
+.modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+            radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(72, 187, 120, 0.1) 0%, transparent 50%);
+    animation: floatingOrbs 6s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes floatingOrbs {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    33% {
+        transform: translate(10px, -5px) scale(1.1);
+    }
+    66% {
+        transform: translate(-5px, 10px) scale(0.9);
+    }
+}
+
+/* Enhanced Modal Title with Gradient Text */
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #48bb78 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
+    position: relative;
+}
+
+/* Add subtle glow effect to title */
+.modal-title::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #48bb78 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(3px);
+    opacity: 0.3;
+    z-index: -1;
+}
+
+/* Modern Close Button with Hover Effects */
+.modal-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(245, 101, 101, 0.1) 0%, rgba(237, 137, 54, 0.1) 100%);
+    color: #f56565;
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-close::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #f56565 0%, #ed8936 100%);
+    opacity: 0;
+    transition: opacity 300ms ease;
+}
+
+.modal-close:hover {
+    transform: rotate(90deg) scale(1.1);
+    background: linear-gradient(135deg, rgba(245, 101, 101, 0.2) 0%, rgba(237, 137, 54, 0.2) 100%);
+    box-shadow: 0 8px 25px rgba(245, 101, 101, 0.3);
+}
+
+.modal-close:hover::before {
+    opacity: 0.1;
+}
+
+.modal-close:hover {
+    color: white;
+}
+
+/* Colorful Modal Body */
+.modal-body {
+    padding: 2rem 2.5rem;
+    overflow-y: auto;
+    flex: 1;
+    background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(247, 250, 252, 0.9) 100%
+    );
+    position: relative;
+}
+
+[data-theme="dark"] .modal-body {
+    background: linear-gradient(180deg,
+    rgba(30, 35, 50, 0.9) 0%,
+    rgba(37, 43, 61, 0.9) 100%
+    );
+}
+
+/* Subtle background pattern for modal body */
+.modal-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+            radial-gradient(circle at 10% 20%, rgba(102, 126, 234, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(72, 187, 120, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(237, 137, 54, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.modal-body > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhanced Form Elements with Color */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Colorful Form Labels */
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+}
+
+[data-theme="dark"] .form-label {
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: #f56565;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(245, 101, 101, 0.5);
+}
+
+/* Beautiful Form Inputs with Gradient Borders */
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 1rem 1.25rem;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    background: linear-gradient(white, white) padding-box,
+    linear-gradient(135deg,
+            rgba(102, 126, 234, 0.3) 0%,
+            rgba(118, 75, 162, 0.3) 50%,
+            rgba(72, 187, 120, 0.3) 100%
+    ) border-box;
+    transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-textarea {
+    background: linear-gradient(#2d3748, #2d3748) padding-box,
+    linear-gradient(135deg,
+            rgba(102, 126, 234, 0.4) 0%,
+            rgba(118, 75, 162, 0.4) 50%,
+            rgba(72, 187, 120, 0.4) 100%
+    ) border-box;
+    color: #e2e8f0;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    transform: translateY(-2px);
+    background: linear-gradient(white, white) padding-box,
+    linear-gradient(135deg,
+            #667eea 0%,
+            #764ba2 50%,
+            #48bb78 100%
+    ) border-box;
+    box-shadow:
+            0 10px 25px rgba(102, 126, 234, 0.15),
+            0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .form-textarea:focus {
+    background: linear-gradient(#2d3748, #2d3748) padding-box,
+    linear-gradient(135deg,
+            #667eea 0%,
+            #764ba2 50%,
+            #48bb78 100%
+    ) border-box;
+    box-shadow:
+            0 10px 25px rgba(102, 126, 234, 0.25),
+            0 0 0 4px rgba(102, 126, 234, 0.2);
+}
+
+/* Enhanced Textarea */
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    max-height: 200px;
+    line-height: 1.6;
+}
+
+/* Colorful Modal Footer */
+.modal-footer {
+    padding: 1.5rem 2.5rem 2rem;
+    border-top: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: linear-gradient(135deg,
+    rgba(247, 250, 252, 0.9) 0%,
+    rgba(237, 242, 247, 0.9) 100%
+    );
+    border-radius: 0 0 20px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .modal-footer {
+    background: linear-gradient(135deg,
+    rgba(37, 43, 61, 0.9) 0%,
+    rgba(30, 35, 50, 0.9) 100%
+    );
+}
+
+/* Floating orbs background for footer */
+.modal-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+            radial-gradient(circle at 20% 50%, rgba(72, 187, 120, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 80% 50%, rgba(102, 126, 234, 0.08) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.modal-footer > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhanced Action Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    text-decoration: none;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Primary Button with Gradient */
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow:
+            0 4px 15px rgba(102, 126, 234, 0.3),
+            0 0 0 1px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #764ba2 0%, #48bb78 100%);
+    opacity: 0;
+    transition: opacity 300ms ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow:
+            0 8px 25px rgba(102, 126, 234, 0.4),
+            0 0 0 1px rgba(102, 126, 234, 0.2);
+}
+
+.btn-primary:hover::before {
+    opacity: 1;
+}
+
+.btn-primary span {
+    position: relative;
+    z-index: 1;
+}
+
+/* Secondary Button with Subtle Colors */
+.btn-secondary {
+    background: linear-gradient(135deg,
+    rgba(237, 242, 247, 0.8) 0%,
+    rgba(226, 232, 240, 0.8) 100%
+    );
+    color: #4a5568;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: linear-gradient(135deg,
+    rgba(74, 85, 104, 0.8) 0%,
+    rgba(113, 128, 150, 0.8) 100%
+    );
+    color: #e2e8f0;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg,
+    rgba(226, 232, 240, 0.9) 0%,
+    rgba(203, 213, 224, 0.9) 100%
+    );
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: linear-gradient(135deg,
+    rgba(113, 128, 150, 0.9) 0%,
+    rgba(160, 174, 192, 0.9) 100%
+    );
+}
+
+/* Add floating animation to modal */
+@keyframes modalFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.modal-overlay.active .modal-dialog {
+    animation: modalSlideIn 400ms cubic-bezier(0.23, 1, 0.32, 1) forwards,
+    modalFloat 6s ease-in-out 1s infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .modal-dialog {
+        max-width: 95vw;
+        margin: 1rem;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .modal-overlay,
+    .modal-dialog,
+    .modal-content::before,
+    .modal-header::before,
+    .btn::before {
+        animation: none !important;
+        transition-duration: 0.1s !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .modal-content {
+        border: 3px solid #000;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        border: 2px solid #000;
+    }
+
+    .btn-primary {
+        background: #000;
+        border: 2px solid #fff;
+    }
+}

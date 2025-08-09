@@ -1,234 +1,125 @@
 /**
- * Travel Itinerary Data Manager - Complete Implementation
- * Modern, localStorage-free version with full functionality
+ * Travel Itinerary Manager - Enhanced Data Manager
+ * Production-ready data management with comprehensive functionality
+ * Modern ES6+ implementation with full error handling and validation
  */
 
-// Event constants
-const EVENTS = {
-    DATA_UPDATED: 'data_updated',
-    ACTIVITY_ADDED: 'activity_added',
-    ACTIVITY_UPDATED: 'activity_updated',
-    ACTIVITY_DELETED: 'activity_deleted',
-    FILTER_CHANGED: 'filter_changed',
-    SORT_CHANGED: 'sort_changed'
-};
+import { ActivityModel } from './ActivityModel.js';
+import { Utils } from '../core/utils.js';
+import { EVENTS, DEFAULT_FILTERS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../core/constants.js';
 
-// Default filter configuration
-const DEFAULT_FILTERS = {
-    dateRange: { start: null, end: null },
-    costRange: { min: 0, max: null },
-    transportModes: [],
-    bookingStatus: [],
-    categories: [],
-    searchText: ''
-};
-
-// Utility functions
-class Utils {
-    static formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleDateString('en-AU', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        } catch {
-            return dateString;
-        }
-    }
-
-    static formatCurrency(amount, currency = 'AUD') {
-        if (typeof amount !== 'number') return 'N/A';
-        return new Intl.NumberFormat('en-AU', {
-            style: 'currency',
-            currency: currency
-        }).format(amount);
-    }
-
-    static formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    static groupBy(array, key) {
-        return array.reduce((groups, item) => {
-            const group = item[key];
-            groups[group] = groups[group] || [];
-            groups[group].push(item);
-            return groups;
-        }, {});
-    }
-
-    static generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-
-    static deepClone(obj) {
-        return JSON.parse(JSON.stringify(obj));
-    }
-
-    static validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    static sanitizeString(str) {
-        if (typeof str !== 'string') return '';
-        return str.trim().replace(/[<>\"'&]/g, '');
-    }
-}
-
-// Activity Model
-class ActivityModel {
-    constructor(data = {}) {
-        this.id = data.id || Utils.generateId();
-        this.activity = data.activity || '';
-        this.date = data.date || '';
-        this.time = data.time || '';
-        this.reachTo = data.reachTo || '';
-        this.transportMode = data.transportMode || 'walking';
-        this.cost = parseFloat(data.cost) || 0;
-        this.booking = data.booking || 'not_required';
-        this.category = data.category || 'other';
-        this.notes = data.notes || '';
-        this.priority = data.priority || 'medium';
-        this.duration = data.duration || '';
-        this.createdAt = data.createdAt || new Date().toISOString();
-        this.updatedAt = data.updatedAt || new Date().toISOString();
-    }
-
-    validate() {
-        const errors = [];
-
-        if (!this.activity || this.activity.trim() === '') {
-            errors.push('Activity name is required');
-        }
-
-        if (!this.date || isNaN(new Date(this.date).getTime())) {
-            errors.push('Valid date is required');
-        }
-
-        if (this.cost < 0) {
-            errors.push('Cost cannot be negative');
-        }
-
-        if (this.time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(this.time)) {
-            errors.push('Time must be in HH:MM format');
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
-    }
-
-    matches(searchTerm) {
-        if (!searchTerm) return true;
-
-        const term = searchTerm.toLowerCase();
-        const searchableFields = [
-            this.activity,
-            this.reachTo,
-            this.transportMode,
-            this.category,
-            this.notes,
-            this.booking
-        ];
-
-        return searchableFields.some(field =>
-            field && field.toLowerCase().includes(term)
-        );
-    }
-
-    clone() {
-        return new ActivityModel(this.toJSON());
-    }
-
-    toJSON() {
-        return {
-            id: this.id,
-            activity: this.activity,
-            date: this.date,
-            time: this.time,
-            reachTo: this.reachTo,
-            transportMode: this.transportMode,
-            cost: this.cost,
-            booking: this.booking,
-            category: this.category,
-            notes: this.notes,
-            priority: this.priority,
-            duration: this.duration,
-            createdAt: this.createdAt,
-            updatedAt: this.updatedAt
-        };
-    }
-
-    update(data) {
-        Object.keys(data).forEach(key => {
-            if (this.hasOwnProperty(key) && data[key] !== undefined) {
-                this[key] = data[key];
-            }
-        });
-        this.updatedAt = new Date().toISOString();
-        return this;
-    }
-}
-
-// Simple Event Emitter
+/**
+ * Enhanced Event Emitter for robust data management events
+ */
 class EventEmitter {
     constructor() {
-        this.events = {};
+        this.events = new Map();
+        this.maxListeners = 50;
     }
 
     on(event, listener) {
-        if (!this.events[event]) {
-            this.events[event] = [];
+        if (typeof listener !== 'function') {
+            throw new TypeError('Listener must be a function');
         }
-        this.events[event].push(listener);
+
+        if (!this.events.has(event)) {
+            this.events.set(event, []);
+        }
+
+        const listeners = this.events.get(event);
+        if (listeners.length >= this.maxListeners) {
+            console.warn(`Max listeners (${this.maxListeners}) exceeded for event '${event}'`);
+        }
+
+        listeners.push(listener);
+        return this;
     }
 
     emit(event, ...args) {
-        if (this.events[event]) {
-            this.events[event].forEach(listener => {
+        if (this.events.has(event)) {
+            const listeners = [...this.events.get(event)]; // Clone to prevent modification during iteration
+            listeners.forEach(listener => {
                 try {
-                    listener(...args);
+                    listener.apply(this, args);
                 } catch (error) {
-                    console.error('Event listener error:', error);
+                    console.error(`Event listener error for '${event}':`, error);
                 }
             });
         }
+        return this;
     }
 
-    removeAllListeners() {
-        this.events = {};
+    off(event, listener) {
+        if (this.events.has(event)) {
+            const listeners = this.events.get(event);
+            const index = listeners.indexOf(listener);
+            if (index > -1) {
+                listeners.splice(index, 1);
+                if (listeners.length === 0) {
+                    this.events.delete(event);
+                }
+            }
+        }
+        return this;
+    }
+
+    once(event, listener) {
+        const onceWrapper = (...args) => {
+            this.off(event, onceWrapper);
+            listener.apply(this, args);
+        };
+        return this.on(event, onceWrapper);
+    }
+
+    removeAllListeners(event) {
+        if (event) {
+            this.events.delete(event);
+        } else {
+            this.events.clear();
+        }
+        return this;
+    }
+
+    listenerCount(event) {
+        return this.events.has(event) ? this.events.get(event).length : 0;
     }
 }
 
-// Main Data Manager Class
-class TravelDataManager extends EventEmitter {
-    constructor() {
+/**
+ * Production-ready Data Manager with comprehensive functionality
+ */
+export class DataManager extends EventEmitter {
+    constructor(options = {}) {
         super();
 
-        // Core data storage (in-memory only)
+        // Configuration
+        this.config = {
+            maxActivities: options.maxActivities || 10000,
+            maxBackups: options.maxBackups || 10,
+            maxDeletedItems: options.maxDeletedItems || 50,
+            autoSaveInterval: options.autoSaveInterval || 30000,
+            enableValidation: options.enableValidation !== false,
+            enableBackups: options.enableBackups !== false,
+            ...options
+        };
+
+        // Core data storage (in-memory)
         this.activities = [];
         this.filteredActivities = [];
         this.deletedActivities = [];
         this.backupHistory = [];
 
-        // Configuration
-        this.filters = { ...DEFAULT_FILTERS };
+        // State management
+        this.filters = this.createDefaultFilters();
         this.sortConfig = {
             field: 'date',
             order: 'asc'
         };
 
-        // State management
+        // Runtime state
         this.isDirty = false;
         this.isLoading = false;
+        this.isInitialized = false;
         this.lastSaved = null;
         this.autoSaveTimer = null;
 
@@ -236,136 +127,308 @@ class TravelDataManager extends EventEmitter {
         this.stats = {
             totalOperations: 0,
             lastFilterTime: 0,
-            lastSortTime: 0
+            lastSortTime: 0,
+            cacheHits: 0,
+            cacheMisses: 0
         };
 
-        // Initialize
-        this.initialize();
+        // Simple cache for expensive operations
+        this.cache = new Map();
+        this.cacheTimeout = 300000; // 5 minutes
+
+        // Bind methods to preserve context
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+        this.handleBeforeUnload = this.handleBeforeUnload.bind(this);
     }
 
-    async initialize() {
-        console.log('🚀 Initializing Travel Data Manager v2.0.0');
+    /**
+     * Create default filters object
+     */
+    createDefaultFilters() {
+        return {
+            search: '',
+            startDate: '',
+            endDate: '',
+            transport: '',
+            booking: ['TRUE', 'FALSE'],
+            minCost: 0,
+            maxCost: null,
+            categories: [],
+            tags: []
+        };
+    }
 
+    /**
+     * Initialize the data manager
+     */
+    async init() {
         try {
+            console.log('🚀 Initializing Enhanced Data Manager v2.1.0');
             this.isLoading = true;
 
-            // Load any sample data or initialize empty state
+            // Setup browser event listeners for data safety
+            this.setupBrowserEvents();
+
+            // Load initial data
             await this.loadInitialData();
 
-            // Setup auto-save (using memory snapshots instead of localStorage)
-            this.setupAutoSave();
+            // Setup auto-save functionality
+            if (this.config.enableBackups) {
+                this.setupAutoSave();
+            }
 
-            console.log('✅ Travel Data Manager initialized successfully');
+            // Apply initial sorting and filtering
+            await this.performInitialSetup();
+
+            this.isInitialized = true;
+            console.log('✅ Data Manager initialized successfully');
+
             this.emit(EVENTS.DATA_UPDATED);
+            return this;
 
         } catch (error) {
-            console.error('❌ Failed to initialize:', error);
-            throw new Error(`Initialization failed: ${error.message}`);
+            console.error('❌ Failed to initialize Data Manager:', error);
+            throw new Error(`Data Manager initialization failed: ${error.message}`);
         } finally {
             this.isLoading = false;
         }
     }
 
-    async loadInitialData() {
-        // In a real application, this would load from a database or API
-        // For now, we'll start with empty data
-        this.activities = [];
-        this.filteredActivities = [];
+    /**
+     * Setup browser event listeners for data safety
+     */
+    setupBrowserEvents() {
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        }
 
-        console.log('📂 Initial data loaded (empty state)');
-    }
-
-    setupAutoSave() {
-        // Create memory snapshots every 30 seconds instead of localStorage
-        this.autoSaveTimer = setInterval(() => {
-            if (this.isDirty) {
-                this.createMemorySnapshot();
-                this.isDirty = false;
-                this.lastSaved = new Date().toISOString();
-                console.log('💾 Auto-saved to memory snapshot');
-            }
-        }, 30000);
-    }
-
-    createMemorySnapshot() {
-        const snapshot = {
-            activities: this.activities.map(a => a.toJSON()),
-            filters: Utils.deepClone(this.filters),
-            sortConfig: Utils.deepClone(this.sortConfig),
-            timestamp: new Date().toISOString()
-        };
-
-        // Keep only last 5 snapshots to manage memory
-        this.backupHistory.push(snapshot);
-        if (this.backupHistory.length > 5) {
-            this.backupHistory.shift();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('beforeunload', this.handleBeforeUnload);
         }
     }
 
+    /**
+     * Handle browser visibility change
+     */
+    handleVisibilityChange() {
+        if (document.hidden && this.isDirty) {
+            this.createMemorySnapshot();
+        }
+    }
+
+    /**
+     * Handle before page unload
+     */
+    handleBeforeUnload(event) {
+        if (this.isDirty) {
+            this.createMemorySnapshot();
+            event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    }
+
+    /**
+     * Load initial data
+     */
+    async loadInitialData() {
+        // Start with empty data - can be extended for persistence
+        this.activities = [];
+        this.filteredActivities = [];
+        console.log('📂 Initial data loaded (empty state)');
+    }
+
+    /**
+     * Perform initial setup
+     */
+    async performInitialSetup() {
+        await Promise.all([
+            this.sortActivities(),
+            this.applyFilters()
+        ]);
+    }
+
+    /**
+     * Setup auto-save functionality
+     */
+    setupAutoSave() {
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+        }
+
+        this.autoSaveTimer = setInterval(() => {
+            if (this.isDirty) {
+                try {
+                    this.createMemorySnapshot();
+                    this.isDirty = false;
+                    this.lastSaved = new Date().toISOString();
+                    console.log('💾 Auto-saved to memory snapshot');
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                }
+            }
+        }, this.config.autoSaveInterval);
+    }
+
+    /**
+     * Create memory snapshot for backup
+     */
+    createMemorySnapshot() {
+        try {
+            const snapshot = {
+                activities: this.activities.map(a => a.toJSON()),
+                filters: Utils.deepClone(this.filters),
+                sortConfig: Utils.deepClone(this.sortConfig),
+                timestamp: new Date().toISOString(),
+                id: Utils.generateId(),
+                version: '2.1.0'
+            };
+
+            this.backupHistory.push(snapshot);
+
+            // Maintain backup limit
+            if (this.backupHistory.length > this.config.maxBackups) {
+                this.backupHistory.shift();
+            }
+
+            return snapshot.id;
+        } catch (error) {
+            console.error('Failed to create memory snapshot:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark data as dirty and update statistics
+     */
     markDirty() {
         this.isDirty = true;
         this.stats.totalOperations++;
+        this.invalidateCache();
     }
 
-    // Activity CRUD operations
-    addActivity(activityData) {
-        try {
-            const activity = new ActivityModel(activityData);
-            const validation = activity.validate();
+    /**
+     * Invalidate cache entries
+     */
+    invalidateCache() {
+        this.cache.clear();
+    }
 
-            if (!validation.isValid) {
-                throw new Error(`Invalid activity data: ${validation.errors.join(', ')}`);
+    /**
+     * Get cached value or compute and cache
+     */
+    getCached(key, computeFn) {
+        if (this.cache.has(key)) {
+            const cached = this.cache.get(key);
+            if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                this.stats.cacheHits++;
+                return cached.value;
+            }
+            this.cache.delete(key);
+        }
+
+        this.stats.cacheMisses++;
+        const value = computeFn();
+        this.cache.set(key, {
+            value,
+            timestamp: Date.now()
+        });
+        return value;
+    }
+
+    // ==================== ACTIVITY CRUD OPERATIONS ====================
+
+    /**
+     * Add a new activity with comprehensive validation
+     */
+    async addActivity(activityData) {
+        try {
+            // Check activity limit
+            if (this.activities.length >= this.config.maxActivities) {
+                throw new Error(`Maximum number of activities (${this.config.maxActivities}) reached`);
+            }
+
+            const activity = new ActivityModel(activityData);
+
+            if (this.config.enableValidation) {
+                const validation = activity.validate();
+                if (!validation.isValid) {
+                    throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+                }
+            }
+
+            // Check for duplicates if configured
+            if (this.isDuplicateActivity(activity)) {
+                console.warn('Duplicate activity detected:', activity.activity);
             }
 
             this.activities.push(activity);
             this.markDirty();
-            this.sortActivities();
-            this.applyFilters();
+
+            await Promise.all([
+                this.sortActivities(),
+                this.applyFilters()
+            ]);
 
             console.log(`➕ Added activity: ${activity.activity}`);
             this.emit(EVENTS.ACTIVITY_ADDED, activity);
             this.emit(EVENTS.DATA_UPDATED);
 
             return activity;
+
         } catch (error) {
             console.error('Failed to add activity:', error);
             throw error;
         }
     }
 
-    updateActivity(id, updates) {
+    /**
+     * Update an existing activity with rollback capability
+     */
+    async updateActivity(id, updates) {
         try {
             const activity = this.getActivityById(id);
             if (!activity) {
                 throw new Error(`Activity not found: ${id}`);
             }
 
+            // Create backup for rollback
             const originalData = activity.toJSON();
+
+            // Apply updates
             activity.update(updates);
 
-            const validation = activity.validate();
-            if (!validation.isValid) {
-                // Restore original data if validation fails
-                Object.assign(activity, originalData);
-                throw new Error(`Invalid update: ${validation.errors.join(', ')}`);
+            // Validate if enabled
+            if (this.config.enableValidation) {
+                const validation = activity.validate();
+                if (!validation.isValid) {
+                    // Rollback on validation failure
+                    Object.assign(activity, new ActivityModel(originalData));
+                    throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+                }
             }
 
             this.markDirty();
-            this.sortActivities();
-            this.applyFilters();
+
+            await Promise.all([
+                this.sortActivities(),
+                this.applyFilters()
+            ]);
 
             console.log(`📝 Updated activity: ${activity.activity}`);
             this.emit(EVENTS.ACTIVITY_UPDATED, activity);
             this.emit(EVENTS.DATA_UPDATED);
 
             return activity;
+
         } catch (error) {
             console.error('Failed to update activity:', error);
             throw error;
         }
     }
 
-    deleteActivity(id) {
+    /**
+     * Delete an activity with recovery option
+     */
+    async deleteActivity(id) {
         try {
             const index = this.activities.findIndex(a => a.id === id);
             if (index === -1) {
@@ -374,1181 +437,1047 @@ class TravelDataManager extends EventEmitter {
 
             const activity = this.activities[index];
             this.activities.splice(index, 1);
+
+            // Store for potential recovery
             this.deletedActivities.push({
                 ...activity.toJSON(),
-                deletedAt: new Date().toISOString()
+                deletedAt: new Date().toISOString(),
+                originalIndex: index
             });
 
+            // Maintain deleted items limit
+            if (this.deletedActivities.length > this.config.maxDeletedItems) {
+                this.deletedActivities.shift();
+            }
+
             this.markDirty();
-            this.applyFilters();
+            await this.applyFilters();
 
             console.log(`🗑️ Deleted activity: ${activity.activity}`);
             this.emit(EVENTS.ACTIVITY_DELETED, activity);
             this.emit(EVENTS.DATA_UPDATED);
 
             return true;
+
         } catch (error) {
             console.error('Failed to delete activity:', error);
             throw error;
         }
     }
 
-    getActivityById(id) {
-        return this.activities.find(activity => activity.id === id) || null;
+    /**
+     * Duplicate an existing activity
+     */
+    async duplicateActivity(id) {
+        try {
+            const activity = this.getActivityById(id);
+            if (!activity) {
+                throw new Error(`Activity not found: ${id}`);
+            }
+
+            const duplicatedActivity = activity.clone();
+            duplicatedActivity.activity = `${duplicatedActivity.activity} (Copy)`;
+
+            this.activities.push(duplicatedActivity);
+            this.markDirty();
+
+            await Promise.all([
+                this.sortActivities(),
+                this.applyFilters()
+            ]);
+
+            console.log(`📋 Duplicated activity: ${duplicatedActivity.activity}`);
+            this.emit(EVENTS.ACTIVITY_ADDED, duplicatedActivity);
+            this.emit(EVENTS.DATA_UPDATED);
+
+            return duplicatedActivity;
+
+        } catch (error) {
+            console.error('Failed to duplicate activity:', error);
+            throw error;
+        }
     }
 
-    // Bulk operations
-    importActivities(activitiesData, options = {}) {
+    /**
+     * Restore a deleted activity
+     */
+    async restoreActivity(deletedIndex) {
+        try {
+            if (deletedIndex < 0 || deletedIndex >= this.deletedActivities.length) {
+                throw new Error('Invalid deleted activity index');
+            }
+
+            const deletedData = this.deletedActivities[deletedIndex];
+            const activity = new ActivityModel(deletedData);
+
+            // Remove from deleted list
+            this.deletedActivities.splice(deletedIndex, 1);
+
+            // Add back to activities
+            this.activities.push(activity);
+            this.markDirty();
+
+            await Promise.all([
+                this.sortActivities(),
+                this.applyFilters()
+            ]);
+
+            console.log(`🔄 Restored activity: ${activity.activity}`);
+            this.emit(EVENTS.ACTIVITY_ADDED, activity);
+            this.emit(EVENTS.DATA_UPDATED);
+
+            return activity;
+
+        } catch (error) {
+            console.error('Failed to restore activity:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get activity by ID with caching
+     */
+    getActivityById(id) {
+        return this.getCached(`activity_${id}`, () => {
+            return this.activities.find(activity => activity.id === id) || null;
+        });
+    }
+
+    // ==================== FILTERING AND SORTING ====================
+
+    /**
+     * Apply filters with performance optimization
+     */
+    async applyFilters() {
+        const startTime = performance.now();
+
+        try {
+            let filtered = [...this.activities];
+
+            // Text search with fuzzy matching
+            if (this.filters.search?.trim()) {
+                const searchTerm = this.filters.search.toLowerCase().trim();
+                filtered = filtered.filter(activity =>
+                    activity.matches ? activity.matches(searchTerm) :
+                        this.basicTextMatch(activity, searchTerm)
+                );
+            }
+
+            // Date range filtering
+            if (this.filters.startDate) {
+                filtered = filtered.filter(a => a.date >= this.filters.startDate);
+            }
+            if (this.filters.endDate) {
+                filtered = filtered.filter(a => a.date <= this.filters.endDate);
+            }
+
+            // Transport mode filtering
+            if (this.filters.transport && this.filters.transport !== '') {
+                filtered = filtered.filter(a => a.transportMode === this.filters.transport);
+            }
+
+            // Booking status filtering with array support
+            if (this.filters.booking && Array.isArray(this.filters.booking)) {
+                if (this.filters.booking.length === 1) {
+                    filtered = filtered.filter(a => this.filters.booking.includes(a.booking));
+                }
+                // If both TRUE and FALSE are selected, show all
+            }
+
+            // Cost range filtering
+            if (this.filters.minCost > 0) {
+                filtered = filtered.filter(a => a.cost >= this.filters.minCost);
+            }
+            if (this.filters.maxCost && this.filters.maxCost > 0) {
+                filtered = filtered.filter(a => a.cost <= this.filters.maxCost);
+            }
+
+            // Category filtering
+            if (this.filters.categories?.length > 0) {
+                filtered = filtered.filter(a =>
+                    this.filters.categories.includes(a.category || 'other')
+                );
+            }
+
+            this.filteredActivities = filtered;
+            this.stats.lastFilterTime = performance.now() - startTime;
+
+            console.log(`🔍 Filtered ${filtered.length}/${this.activities.length} activities in ${this.stats.lastFilterTime.toFixed(2)}ms`);
+            this.emit(EVENTS.FILTER_CHANGED, this.filters);
+
+        } catch (error) {
+            console.error('Filter application failed:', error);
+            this.filteredActivities = [...this.activities]; // Fallback to unfiltered
+        }
+    }
+
+    /**
+     * Basic text matching fallback
+     */
+    basicTextMatch(activity, searchTerm) {
+        const searchableFields = [
+            activity.activity,
+            activity.startFrom,
+            activity.reachTo,
+            activity.transportMode,
+            activity.additionalDetails,
+            activity.accommodationDetails
+        ];
+
+        return searchableFields.some(field =>
+            field && field.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    /**
+     * Sort activities with performance optimization
+     */
+    async sortActivities() {
+        const startTime = performance.now();
+
+        try {
+            this.activities.sort((a, b) => {
+                let aValue = a[this.sortConfig.field];
+                let bValue = b[this.sortConfig.field];
+
+                // Handle different data types
+                switch (this.sortConfig.field) {
+                    case 'date':
+                        aValue = new Date(aValue || '1970-01-01');
+                        bValue = new Date(bValue || '1970-01-01');
+                        break;
+                    case 'cost':
+                        aValue = parseFloat(aValue) || 0;
+                        bValue = parseFloat(bValue) || 0;
+                        break;
+                    case 'createdAt':
+                    case 'updatedAt':
+                        aValue = new Date(aValue || 0);
+                        bValue = new Date(bValue || 0);
+                        break;
+                    default:
+                        if (typeof aValue === 'string') {
+                            aValue = aValue.toLowerCase();
+                            bValue = (bValue || '').toLowerCase();
+                        }
+                }
+
+                let result = 0;
+                if (aValue < bValue) result = -1;
+                else if (aValue > bValue) result = 1;
+
+                return this.sortConfig.order === 'desc' ? -result : result;
+            });
+
+            this.stats.lastSortTime = performance.now() - startTime;
+            console.log(`📊 Sorted ${this.activities.length} activities by ${this.sortConfig.field} in ${this.stats.lastSortTime.toFixed(2)}ms`);
+
+        } catch (error) {
+            console.error('Sort operation failed:', error);
+        }
+    }
+
+    /**
+     * Update filters with validation
+     */
+    updateFilters(newFilters) {
+        try {
+            // Validate filter values
+            const validatedFilters = this.validateFilters(newFilters);
+
+            this.filters = { ...this.filters, ...validatedFilters };
+            this.applyFilters();
+            this.markDirty();
+
+        } catch (error) {
+            console.error('Failed to update filters:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Validate filter values
+     */
+    validateFilters(filters) {
+        const validated = {};
+
+        Object.keys(filters).forEach(key => {
+            const value = filters[key];
+
+            switch (key) {
+                case 'search':
+                    validated[key] = typeof value === 'string' ? value : '';
+                    break;
+                case 'startDate':
+                case 'endDate':
+                    validated[key] = value && !isNaN(new Date(value)) ? value : '';
+                    break;
+                case 'transport':
+                    validated[key] = typeof value === 'string' ? value : '';
+                    break;
+                case 'booking':
+                    validated[key] = Array.isArray(value) ? value : [value].filter(Boolean);
+                    break;
+                case 'minCost':
+                case 'maxCost':
+                    validated[key] = typeof value === 'number' && value >= 0 ? value : 0;
+                    break;
+                case 'categories':
+                    validated[key] = Array.isArray(value) ? value : [];
+                    break;
+                default:
+                    validated[key] = value;
+            }
+        });
+
+        return validated;
+    }
+
+    /**
+     * Reset filters to default
+     */
+    resetFilters() {
+        this.filters = this.createDefaultFilters();
+        this.applyFilters();
+        this.markDirty();
+        this.emit(EVENTS.FILTER_CHANGED, this.filters);
+    }
+
+    /**
+     * Update sort configuration
+     */
+    updateSort(field, order = 'asc') {
+        if (!['asc', 'desc'].includes(order)) {
+            throw new Error('Sort order must be "asc" or "desc"');
+        }
+
+        this.sortConfig = { field, order };
+        this.sortActivities().then(() => {
+            this.applyFilters();
+            this.markDirty();
+            this.emit(EVENTS.SORT_CHANGED, this.sortConfig);
+        });
+    }
+
+    // ==================== STATISTICS AND ANALYTICS ====================
+
+    /**
+     * Get comprehensive statistics with caching
+     */
+    getStatistics() {
+        return this.getCached('statistics', () => {
+            const stats = {
+                totalActivities: this.activities.length,
+                filteredActivities: this.filteredActivities.length,
+                totalCost: 0,
+                averageCostPerActivity: 0,
+                transportModes: {},
+                categories: {},
+                bookingStatus: {},
+                bookingsCount: 0,
+                bookingPercentage: 0,
+                upcomingActivities: 0,
+                dateRange: this.getDateRange(),
+                costRange: { min: Infinity, max: -Infinity },
+                totalDays: 0,
+                totalCountries: 0
+            };
+
+            // Calculate statistics from activities
+            this.activities.forEach(activity => {
+                // Cost calculations
+                stats.totalCost += activity.cost || 0;
+                if (activity.cost < stats.costRange.min) stats.costRange.min = activity.cost;
+                if (activity.cost > stats.costRange.max) stats.costRange.max = activity.cost;
+
+                // Transport mode distribution
+                const transport = activity.transportMode || 'Unknown';
+                stats.transportModes[transport] = (stats.transportModes[transport] || 0) + 1;
+
+                // Category distribution
+                const category = activity.category || 'other';
+                stats.categories[category] = (stats.categories[category] || 0) + 1;
+
+                // Booking status distribution
+                const booking = activity.booking || 'FALSE';
+                stats.bookingStatus[booking] = (stats.bookingStatus[booking] || 0) + 1;
+
+                if (activity.isBooked && activity.isBooked()) {
+                    stats.bookingsCount++;
+                }
+
+                // Check if upcoming (next 7 days)
+                if (activity.isUpcoming && activity.isUpcoming(7)) {
+                    stats.upcomingActivities++;
+                }
+            });
+
+            // Calculate derived statistics
+            stats.averageCostPerActivity = stats.totalActivities > 0
+                ? stats.totalCost / stats.totalActivities
+                : 0;
+
+            stats.bookingPercentage = stats.totalActivities > 0
+                ? Math.round((stats.bookingsCount / stats.totalActivities) * 100)
+                : 0;
+
+            // Fix cost range edge cases
+            if (stats.costRange.min === Infinity) stats.costRange.min = 0;
+            if (stats.costRange.max === -Infinity) stats.costRange.max = 0;
+
+            // Calculate total days
+            if (stats.dateRange) {
+                stats.totalDays = stats.dateRange.totalDays;
+            }
+
+            // Extract unique destinations for country count
+            const destinations = new Set();
+            this.activities.forEach(activity => {
+                if (activity.reachTo) destinations.add(activity.reachTo);
+                if (activity.startFrom) destinations.add(activity.startFrom);
+            });
+            stats.totalCountries = destinations.size;
+
+            return stats;
+        });
+    }
+
+    /**
+     * Get cost breakdown by category with caching
+     */
+    getCostBreakdown() {
+        return this.getCached('costBreakdown', () => {
+            const breakdown = {};
+
+            this.activities.forEach(activity => {
+                const category = activity.category || 'other';
+                breakdown[category] = (breakdown[category] || 0) + (activity.cost || 0);
+            });
+
+            return breakdown;
+        });
+    }
+
+    /**
+     * Get upcoming activities with caching
+     */
+    getUpcomingActivities(daysAhead = 7) {
+        return this.getCached(`upcoming_${daysAhead}`, () => {
+            const today = new Date().toISOString().split('T')[0];
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
+            const cutoffString = cutoffDate.toISOString().split('T')[0];
+
+            return this.activities
+                .filter(activity => {
+                    return activity.date >= today && activity.date <= cutoffString;
+                })
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+        });
+    }
+
+    /**
+     * Get date range of activities
+     */
+    getDateRange() {
+        if (this.activities.length === 0) return null;
+
+        const dates = this.activities
+            .map(a => a.date)
+            .filter(date => date)
+            .sort();
+
+        if (dates.length === 0) return null;
+
+        const startDate = new Date(dates[0]);
+        const endDate = new Date(dates[dates.length - 1]);
+        const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+        return {
+            start: dates[0],
+            end: dates[dates.length - 1],
+            totalDays: Math.max(1, totalDays)
+        };
+    }
+
+    // ==================== IMPORT/EXPORT FUNCTIONALITY ====================
+
+    /**
+     * Import activities with comprehensive error handling
+     */
+    async importActivities(activitiesData, options = {}) {
         const {
             skipDuplicates = true,
-            validateAll = true
+            validateAll = true,
+            batchSize = 100
         } = options;
 
         const results = {
             imported: 0,
             skipped: 0,
-            errors: []
+            errors: [],
+            totalProcessed: 0
         };
 
-        activitiesData.forEach((data, index) => {
-            try {
-                const activity = new ActivityModel(data);
+        try {
+            // Process in batches for better performance
+            for (let i = 0; i < activitiesData.length; i += batchSize) {
+                const batch = activitiesData.slice(i, i + batchSize);
 
-                if (validateAll) {
-                    const validation = activity.validate();
-                    if (!validation.isValid) {
+                for (const [index, data] of batch.entries()) {
+                    const globalIndex = i + index;
+                    results.totalProcessed++;
+
+                    try {
+                        const activity = new ActivityModel(data);
+
+                        if (validateAll && this.config.enableValidation) {
+                            const validation = activity.validate();
+                            if (!validation.isValid) {
+                                results.errors.push({
+                                    index: globalIndex + 1,
+                                    data,
+                                    errors: validation.errors
+                                });
+                                continue;
+                            }
+                        }
+
+                        if (skipDuplicates && this.isDuplicateActivity(activity)) {
+                            results.skipped++;
+                            continue;
+                        }
+
+                        this.activities.push(activity);
+                        results.imported++;
+
+                    } catch (error) {
                         results.errors.push({
-                            index,
+                            index: globalIndex + 1,
                             data,
-                            errors: validation.errors
+                            errors: [error.message]
                         });
-                        return;
                     }
                 }
 
-                if (skipDuplicates && this.isDuplicateActivity(activity)) {
-                    results.skipped++;
-                    return;
+                // Yield control periodically for large imports
+                if (i % (batchSize * 10) === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
                 }
-
-                this.activities.push(activity);
-                results.imported++;
-
-            } catch (error) {
-                results.errors.push({
-                    index,
-                    data,
-                    errors: [error.message]
-                });
             }
-        });
 
-        if (results.imported > 0) {
-            this.markDirty();
-            this.sortActivities();
-            this.applyFilters();
-            this.emit(EVENTS.DATA_UPDATED);
+            if (results.imported > 0) {
+                this.markDirty();
+                await Promise.all([
+                    this.sortActivities(),
+                    this.applyFilters()
+                ]);
+                this.emit(EVENTS.DATA_UPDATED);
+            }
+
+            console.log(`📥 Import completed: ${results.imported} imported, ${results.skipped} skipped, ${results.errors.length} errors`);
+            return results;
+
+        } catch (error) {
+            console.error('Import operation failed:', error);
+            throw error;
         }
-
-        return results;
     }
 
+    /**
+     * Check if activity is duplicate
+     */
     isDuplicateActivity(newActivity) {
         return this.activities.some(existing =>
             existing.activity === newActivity.activity &&
             existing.date === newActivity.date &&
-            existing.time === newActivity.time
+            existing.startTime === newActivity.startTime
         );
     }
 
-    // Filtering and sorting
-    applyFilters() {
-        const startTime = performance.now();
-
-        let filtered = [...this.activities];
-
-        // Text search
-        if (this.filters.searchText) {
-            filtered = filtered.filter(activity =>
-                activity.matches(this.filters.searchText)
-            );
-        }
-
-        // Date range
-        if (this.filters.dateRange.start) {
-            filtered = filtered.filter(a => a.date >= this.filters.dateRange.start);
-        }
-        if (this.filters.dateRange.end) {
-            filtered = filtered.filter(a => a.date <= this.filters.dateRange.end);
-        }
-
-        // Cost range
-        if (this.filters.costRange.min !== undefined) {
-            filtered = filtered.filter(a => a.cost >= this.filters.costRange.min);
-        }
-        if (this.filters.costRange.max !== null && this.filters.costRange.max !== undefined) {
-            filtered = filtered.filter(a => a.cost <= this.filters.costRange.max);
-        }
-
-        // Transport modes
-        if (this.filters.transportModes.length > 0) {
-            filtered = filtered.filter(a =>
-                this.filters.transportModes.includes(a.transportMode)
-            );
-        }
-
-        // Booking status
-        if (this.filters.bookingStatus.length > 0) {
-            filtered = filtered.filter(a =>
-                this.filters.bookingStatus.includes(a.booking)
-            );
-        }
-
-        // Categories
-        if (this.filters.categories.length > 0) {
-            filtered = filtered.filter(a =>
-                this.filters.categories.includes(a.category)
-            );
-        }
-
-        this.filteredActivities = filtered;
-        this.stats.lastFilterTime = performance.now() - startTime;
-
-        console.log(`🔍 Filtered ${filtered.length}/${this.activities.length} activities`);
-        this.emit(EVENTS.FILTER_CHANGED, this.filters);
-    }
-
-    sortActivities() {
-        const startTime = performance.now();
-
-        this.activities.sort((a, b) => {
-            let aValue = a[this.sortConfig.field];
-            let bValue = b[this.sortConfig.field];
-
-            if (this.sortConfig.field === 'date') {
-                aValue = new Date(aValue || '1970-01-01');
-                bValue = new Date(bValue || '1970-01-01');
-            } else if (this.sortConfig.field === 'cost') {
-                aValue = parseFloat(aValue) || 0;
-                bValue = parseFloat(bValue) || 0;
-            } else if (typeof aValue === 'string') {
-                aValue = aValue.toLowerCase();
-                bValue = (bValue || '').toLowerCase();
-            }
-
-            let result = 0;
-            if (aValue < bValue) result = -1;
-            else if (aValue > bValue) result = 1;
-
-            return this.sortConfig.order === 'desc' ? -result : result;
-        });
-
-        this.stats.lastSortTime = performance.now() - startTime;
-        console.log(`📊 Sorted ${this.activities.length} activities by ${this.sortConfig.field}`);
-    }
-
-    updateFilters(newFilters) {
-        this.filters = { ...this.filters, ...newFilters };
-        this.applyFilters();
-        this.markDirty();
-    }
-
-    updateSort(field, order = 'asc') {
-        this.sortConfig = { field, order };
-        this.sortActivities();
-        this.applyFilters();
-        this.markDirty();
-        this.emit(EVENTS.SORT_CHANGED, this.sortConfig);
-    }
-
-    // Statistics and analytics
-    getStatistics() {
-        const stats = {
-            totalActivities: this.activities.length,
-            filteredActivities: this.filteredActivities.length,
-            totalCost: 0,
-            averageCostPerActivity: 0,
-            transportModes: {},
-            categories: {},
-            bookingStatus: {},
-            dateRange: this.getDateRange(),
-            costRange: { min: Infinity, max: -Infinity }
-        };
-
-        this.activities.forEach(activity => {
-            // Cost calculations
-            stats.totalCost += activity.cost;
-            if (activity.cost < stats.costRange.min) stats.costRange.min = activity.cost;
-            if (activity.cost > stats.costRange.max) stats.costRange.max = activity.cost;
-
-            // Transport mode distribution
-            stats.transportModes[activity.transportMode] =
-                (stats.transportModes[activity.transportMode] || 0) + 1;
-
-            // Category distribution
-            stats.categories[activity.category] =
-                (stats.categories[activity.category] || 0) + 1;
-
-            // Booking status distribution
-            stats.bookingStatus[activity.booking] =
-                (stats.bookingStatus[activity.booking] || 0) + 1;
-        });
-
-        stats.averageCostPerActivity = stats.totalActivities > 0
-            ? stats.totalCost / stats.totalActivities
-            : 0;
-
-        if (stats.costRange.min === Infinity) stats.costRange.min = 0;
-        if (stats.costRange.max === -Infinity) stats.costRange.max = 0;
-
-        return stats;
-    }
-
-    getMemoryUsage() {
-        const activitiesSize = JSON.stringify(this.activities).length * 2; // UTF-16
-        const backupsSize = JSON.stringify(this.backupHistory).length * 2;
-        const filtersSize = JSON.stringify(this.filters).length * 2;
-
-        return {
-            activities: activitiesSize,
-            backups: backupsSize,
-            filters: filtersSize,
-            total: activitiesSize + backupsSize + filtersSize
-        };
-    }
-
-    // System health and maintenance
-    getSystemHealth() {
-        const health = {
-            status: 'healthy',
-            issues: [],
-            score: 100
-        };
-
-        // Data integrity checks
-        const invalidActivities = this.activities.filter(a => {
-            const validation = a.validate();
-            return !validation.isValid;
-        });
-
-        if (invalidActivities.length > 0) {
-            health.issues.push({
-                type: 'data_integrity',
-                severity: 'warning',
-                message: `${invalidActivities.length} activities have validation issues`,
-                count: invalidActivities.length
-            });
-            health.score -= 10;
-        }
-
-        // Performance health
-        if (this.stats.lastFilterTime > 200) {
-            health.issues.push({
-                type: 'performance',
-                severity: 'warning',
-                message: 'Slow filtering performance detected',
-                value: `${this.stats.lastFilterTime}ms`
-            });
-            health.score -= 15;
-        }
-
-        // Memory health
-        const memoryUsage = this.getMemoryUsage();
-        if (memoryUsage.total > 5 * 1024 * 1024) { // 5MB
-            health.issues.push({
-                type: 'memory',
-                severity: 'warning',
-                message: 'High memory usage detected',
-                value: Utils.formatFileSize(memoryUsage.total)
-            });
-            health.score -= 10;
-        }
-
-        // Set overall status based on score
-        if (health.score < 70) {
-            health.status = 'unhealthy';
-        } else if (health.score < 90) {
-            health.status = 'degraded';
-        }
-
-        return health;
-    }
-
-    async validateAndRepairData() {
-        const results = {
-            validated: 0,
-            repaired: 0,
-            removed: 0,
-            errors: []
-        };
-
-        const validActivities = [];
-
-        for (let i = 0; i < this.activities.length; i++) {
-            const activity = this.activities[i];
-            results.validated++;
-
-            try {
-                const validation = activity.validate();
-
-                if (validation.isValid) {
-                    validActivities.push(activity);
-                } else {
-                    const repaired = this.attemptActivityRepair(activity, validation.errors);
-
-                    if (repaired) {
-                        validActivities.push(repaired);
-                        results.repaired++;
-                        console.log(`✅ Repaired activity: ${activity.activity}`);
-                    } else {
-                        results.removed++;
-                        results.errors.push({
-                            activity: activity.activity,
-                            id: activity.id,
-                            errors: validation.errors
-                        });
-                        console.warn(`❌ Removed invalid activity: ${activity.activity}`);
-                    }
-                }
-            } catch (error) {
-                results.removed++;
-                results.errors.push({
-                    activity: activity.activity || 'Unknown',
-                    id: activity.id || 'Unknown',
-                    errors: [error.message]
-                });
-            }
-        }
-
-        // Update activities if repairs were made
-        if (results.repaired > 0 || results.removed > 0) {
-            this.activities = validActivities;
-            this.sortActivities();
-            this.applyFilters();
-            this.markDirty();
-
-            console.log(`🔧 Data repair completed: ${results.repaired} repaired, ${results.removed} removed`);
-            this.emit(EVENTS.DATA_UPDATED);
-        }
-
-        return results;
-    }
-
-    attemptActivityRepair(activity, errors) {
-        const repaired = activity.clone();
-        let wasRepaired = false;
-
-        errors.forEach(error => {
-            if (error.includes('Activity name is required')) {
-                if (!repaired.activity || repaired.activity.trim() === '') {
-                    repaired.activity = 'Untitled Activity';
-                    wasRepaired = true;
-                }
-            }
-
-            if (error.includes('date is required') || error.includes('Invalid date')) {
-                if (!repaired.date || isNaN(new Date(repaired.date).getTime())) {
-                    repaired.date = new Date().toISOString().split('T')[0];
-                    wasRepaired = true;
-                }
-            }
-
-            if (error.includes('Cost cannot be negative')) {
-                if (repaired.cost < 0) {
-                    repaired.cost = 0;
-                    wasRepaired = true;
-                }
-            }
-        });
-
-        if (wasRepaired) {
-            const validation = repaired.validate();
-            return validation.isValid ? repaired : null;
-        }
-
-        return null;
-    }
-
-    // Export functionality
-    async exportData(format = 'json', options = {}) {
-        const {
-            includeMetadata = true,
-            includeBackups = false,
-            compression = false
-        } = options;
-
-        const exportData = {
-            activities: this.activities.map(a => a.toJSON()),
-            filters: this.filters,
-            sortConfig: this.sortConfig
-        };
-
-        if (includeMetadata) {
-            exportData.metadata = {
-                exportedAt: new Date().toISOString(),
-                version: '2.0.0',
-                totalActivities: this.activities.length,
-                appInfo: {
-                    name: 'Travel Itinerary Manager',
-                    version: '2.0.0'
-                }
-            };
-        }
-
-        if (includeBackups) {
-            exportData.backupHistory = this.backupHistory;
-        }
-
-        switch (format.toLowerCase()) {
-            case 'json':
-                return this.exportToJSON(exportData, options);
-            case 'csv':
-                return this.exportToCSV({ includeFiltered: false, ...options });
-            case 'xlsx':
-                return this.exportToExcel(options);
-            default:
-                throw new Error(`Unsupported export format: ${format}`);
-        }
-    }
-
-    exportToJSON(data, options = {}) {
-        const jsonString = JSON.stringify(data, null, 2);
-
-        return {
-            content: jsonString,
-            filename: `travel-itinerary-${new Date().toISOString().split('T')[0]}.json`,
-            mimeType: 'application/json',
-            size: jsonString.length
-        };
-    }
-
-    exportToCSV(options = {}) {
-        const { includeFiltered = false } = options;
-        const activities = includeFiltered ? this.filteredActivities : this.activities;
-
-        if (activities.length === 0) {
-            throw new Error('No activities to export');
-        }
-
-        const headers = [
-            'ID', 'Activity', 'Date', 'Time', 'Destination',
-            'Transport', 'Cost', 'Booking', 'Category', 'Notes', 'Priority', 'Duration'
-        ];
-
-        const csvRows = [headers.join(',')];
-
-        activities.forEach(activity => {
-            const row = [
-                activity.id,
-                `"${activity.activity.replace(/"/g, '""')}"`,
-                activity.date,
-                activity.time,
-                `"${activity.reachTo.replace(/"/g, '""')}"`,
-                activity.transportMode,
-                activity.cost,
-                activity.booking,
-                activity.category,
-                `"${activity.notes.replace(/"/g, '""')}"`,
-                activity.priority,
-                activity.duration
-            ];
-            csvRows.push(row.join(','));
-        });
-
-        const csvContent = csvRows.join('\n');
-
-        return {
-            content: csvContent,
-            filename: `travel-itinerary-${new Date().toISOString().split('T')[0]}.csv`,
-            mimeType: 'text/csv',
-            size: csvContent.length
-        };
-    }
-
-    exportToExcel(options = {}) {
-        // Simplified Excel export (would need actual XLSX library in real implementation)
-        console.warn('Excel export requires XLSX library - falling back to CSV');
-        return this.exportToCSV(options);
-    }
-
-    // Import functionality
-    async importData(data, format = 'json', options = {}) {
-        const {
-            merge = true,
-            validateData = true,
-            createBackup = true
-        } = options;
-
-        if (createBackup) {
-            this.createBackup();
-        }
-
-        let importedData;
-
+    /**
+     * Export activities to CSV format
+     */
+    exportToCSV() {
         try {
-            switch (format.toLowerCase()) {
-                case 'json':
-                    importedData = typeof data === 'string' ? JSON.parse(data) : data;
-                    break;
-                case 'csv':
-                    importedData = this.parseCSVData(data);
-                    break;
-                default:
-                    throw new Error(`Unsupported import format: ${format}`);
-            }
+            const headers = [
+                'Activity', 'Date', 'Start Time', 'End Time', 'From', 'To',
+                'Transport Mode', 'Booking', 'Cost', 'Additional Details', 'Accommodation Details'
+            ];
 
-            return this.processImportedData(importedData, { merge, validateData });
+            const rows = [headers.join(',')];
+
+            this.activities.forEach(activity => {
+                const csvRow = activity.toCSV ? activity.toCSV() : this.activityToCSV(activity);
+                const values = headers.map(header => {
+                    let value = csvRow[header] || '';
+
+                    // Escape and quote values that contain commas, quotes, or newlines
+                    if (typeof value === 'string') {
+                        value = value.replace(/"/g, '""'); // Escape quotes
+                        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                            value = `"${value}"`;
+                        }
+                    }
+
+                    return value;
+                });
+
+                rows.push(values.join(','));
+            });
+
+            return rows.join('\n');
 
         } catch (error) {
-            console.error('Import failed:', error);
-            throw new Error(`Import failed: ${error.message}`);
+            console.error('CSV export failed:', error);
+            throw error;
         }
     }
 
-    processImportedData(data, options = {}) {
-        const { merge = true, validateData = true } = options;
-        const results = {
-            imported: 0,
-            updated: 0,
-            skipped: 0,
-            errors: []
-        };
-
-        if (!merge) {
-            this.activities = [];
-        }
-
-        if (data.activities && Array.isArray(data.activities)) {
-            const importResults = this.importActivities(data.activities, {
-                skipDuplicates: true,
-                validateAll: validateData
-            });
-
-            results.imported = importResults.imported;
-            results.skipped = importResults.skipped;
-            results.errors = importResults.errors;
-        }
-
-        if (data.filters && merge) {
-            this.filters = { ...this.filters, ...data.filters };
-        }
-
-        if (data.sortConfig && merge) {
-            this.sortConfig = { ...this.sortConfig, ...data.sortConfig };
-        }
-
-        console.log(`📥 Import completed: ${results.imported} imported, ${results.skipped} skipped`);
-
-        if (results.imported > 0) {
-            this.sortActivities();
-            this.applyFilters();
-            this.markDirty();
-            this.emit(EVENTS.DATA_UPDATED);
-        }
-
-        return results;
-    }
-
-    parseCSVData(csvText) {
-        const lines = csvText.split('\n').filter(line => line.trim());
-        if (lines.length < 2) {
-            throw new Error('CSV file must have at least a header and one data row');
-        }
-
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-        const activities = [];
-
-        for (let i = 1; i < lines.length; i++) {
-            const values = this.parseCSVLine(lines[i]);
-            const activity = {};
-
-            headers.forEach((header, index) => {
-                const value = values[index] || '';
-
-                // Map CSV headers to activity properties
-                switch (header.toLowerCase()) {
-                    case 'id':
-                        activity.id = value;
-                        break;
-                    case 'activity':
-                    case 'name':
-                    case 'title':
-                        activity.activity = value;
-                        break;
-                    case 'date':
-                        activity.date = value;
-                        break;
-                    case 'time':
-                        activity.time = value;
-                        break;
-                    case 'destination':
-                    case 'reachto':
-                    case 'reach to':
-                        activity.reachTo = value;
-                        break;
-                    case 'transport':
-                    case 'transportmode':
-                    case 'transport mode':
-                        activity.transportMode = value;
-                        break;
-                    case 'cost':
-                    case 'price':
-                        activity.cost = parseFloat(value) || 0;
-                        break;
-                    case 'booking':
-                    case 'booking status':
-                        activity.booking = value;
-                        break;
-                    case 'category':
-                        activity.category = value;
-                        break;
-                    case 'notes':
-                    case 'description':
-                        activity.notes = value;
-                        break;
-                    case 'priority':
-                        activity.priority = value;
-                        break;
-                    case 'duration':
-                        activity.duration = value;
-                        break;
-                    default:
-                        activity[header] = value;
-                }
-            });
-
-            activities.push(activity);
-        }
-
-        return { activities };
-    }
-
-    parseCSVLine(line) {
-        const values = [];
-        let current = '';
-        let inQuotes = false;
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-
-            if (char === '"') {
-                if (inQuotes && line[i + 1] === '"') {
-                    current += '"';
-                    i++; // Skip next quote
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-
-        values.push(current.trim());
-        return values;
-    }
-
-    // Advanced search functionality
-    advancedSearch(criteria) {
-        const {
-            text = '',
-            dateRange = {},
-            costRange = {},
-            transportModes = [],
-            bookingStatus = [],
-            categories = [],
-            sortBy = 'date',
-            sortOrder = 'asc',
-            limit = null
-        } = criteria;
-
-        let results = [...this.activities];
-
-        // Text search across multiple fields
-        if (text && text.trim()) {
-            const searchTerm = text.toLowerCase().trim();
-            results = results.filter(activity =>
-                activity.matches(searchTerm)
-            );
-        }
-
-        // Date range filter
-        if (dateRange.start) {
-            results = results.filter(a => a.date >= dateRange.start);
-        }
-        if (dateRange.end) {
-            results = results.filter(a => a.date <= dateRange.end);
-        }
-
-        // Cost range filter
-        if (costRange.min !== undefined) {
-            results = results.filter(a => a.cost >= costRange.min);
-        }
-        if (costRange.max !== undefined) {
-            results = results.filter(a => a.cost <= costRange.max);
-        }
-
-        // Transport mode filter
-        if (transportModes.length > 0) {
-            results = results.filter(a =>
-                transportModes.includes(a.transportMode)
-            );
-        }
-
-        // Booking status filter
-        if (bookingStatus.length > 0) {
-            results = results.filter(a =>
-                bookingStatus.includes(a.booking)
-            );
-        }
-
-        // Category filter
-        if (categories.length > 0) {
-            results = results.filter(a =>
-                categories.includes(a.category)
-            );
-        }
-
-        // Sorting
-        results.sort((a, b) => {
-            let aValue = a[sortBy];
-            let bValue = b[sortBy];
-
-            if (sortBy === 'date') {
-                aValue = new Date(aValue);
-                bValue = new Date(bValue);
-            } else if (sortBy === 'cost') {
-                aValue = parseFloat(aValue) || 0;
-                bValue = parseFloat(bValue) || 0;
-            } else if (typeof aValue === 'string') {
-                aValue = aValue.toLowerCase();
-                bValue = (bValue || '').toLowerCase();
-            }
-
-            let result = 0;
-            if (aValue < bValue) result = -1;
-            else if (aValue > bValue) result = 1;
-
-            return sortOrder === 'desc' ? -result : result;
-        });
-
-        // Apply limit
-        if (limit && limit > 0) {
-            results = results.slice(0, limit);
-        }
-
+    /**
+     * Convert activity to CSV format (fallback)
+     */
+    activityToCSV(activity) {
         return {
-            results,
-            total: results.length,
-            criteria,
-            executedAt: new Date().toISOString()
+            'Activity': activity.activity || '',
+            'Date': activity.date || '',
+            'Start Time': activity.startTime || '',
+            'End Time': activity.endTime || '',
+            'From': activity.startFrom || '',
+            'To': activity.reachTo || '',
+            'Transport Mode': activity.transportMode || '',
+            'Booking': activity.booking || 'FALSE',
+            'Cost': activity.cost || 0,
+            'Additional Details': activity.additionalDetails || '',
+            'Accommodation Details': activity.accommodationDetails || ''
         };
     }
 
-    // Recommendation system
-    generateRecommendations() {
-        const recommendations = [];
-        const stats = this.getStatistics();
+    // ==================== BACKUP AND RECOVERY ====================
 
-        // Location-based recommendations
-        const locations = new Set();
-        this.activities.forEach(a => {
-            if (a.reachTo) locations.add(a.reachTo);
-        });
-
-        if (locations.size > 0) {
-            recommendations.push({
-                type: 'location',
-                title: 'Explore More in Your Destinations',
-                description: `You're visiting ${locations.size} locations. Consider adding cultural activities or local experiences.`,
-                suggestions: Array.from(locations).map(loc => ({
-                    location: loc,
-                    suggestions: ['Museum visit', 'Local restaurant', 'Walking tour']
-                }))
-            });
-        }
-
-        // Budget optimization
-        if (stats.totalCost > 0) {
-            const highCostActivities = this.activities
-                .filter(a => a.cost > stats.averageCostPerActivity * 1.5)
-                .sort((a, b) => b.cost - a.cost);
-
-            if (highCostActivities.length > 0) {
-                recommendations.push({
-                    type: 'budget',
-                    title: 'Budget Optimization Opportunities',
-                    description: `${highCostActivities.length} activities are significantly above average cost.`,
-                    suggestions: highCostActivities.slice(0, 3).map(a => ({
-                        activity: a.activity,
-                        cost: a.cost,
-                        suggestion: 'Consider alternatives or early booking discounts'
-                    }))
-                });
-            }
-        }
-
-        // Time optimization
-        const dailyGroups = Utils.groupBy(this.activities, 'date');
-        Object.entries(dailyGroups).forEach(([date, dayActivities]) => {
-            if (dayActivities.length > 5) {
-                recommendations.push({
-                    type: 'schedule',
-                    title: `Busy Day Alert - ${Utils.formatDate(date)}`,
-                    description: `${dayActivities.length} activities scheduled. Consider spreading across multiple days.`,
-                    suggestions: [
-                        'Move non-essential activities to less busy days',
-                        'Group activities by location',
-                        'Build in rest time between activities'
-                    ]
-                });
-            }
-        });
-
-        // Transport efficiency
-        const transportStats = stats.transportModes;
-        const fragmentedTransport = Object.entries(transportStats)
-            .filter(([mode, count]) => count === 1);
-
-        if (fragmentedTransport.length > 2) {
-            recommendations.push({
-                type: 'transport',
-                title: 'Transport Consolidation',
-                description: 'Multiple single-use transport modes detected.',
-                suggestions: [
-                    'Consider daily/weekly transport passes',
-                    'Group activities accessible by the same transport',
-                    'Evaluate walking distances between activities'
-                ]
-            });
-        }
-
-        return {
-            recommendations,
-            generatedAt: new Date().toISOString(),
-            basedOn: {
-                totalActivities: stats.totalActivities,
-                dateRange: this.getDateRange(),
-                budgetTotal: stats.totalCost
-            }
-        };
-    }
-
-    // Get date range of activities
-    getDateRange() {
-        if (this.activities.length === 0) return null;
-
-        const dates = this.activities.map(a => a.date).sort();
-        return {
-            start: dates[0],
-            end: dates[dates.length - 1],
-            totalDays: Math.ceil((new Date(dates[dates.length - 1]) - new Date(dates[0])) / (1000 * 60 * 60 * 24)) + 1
-        };
-    }
-
-    // Backup and recovery
-    createBackup() {
-        const backup = {
-            activities: this.activities.map(a => a.toJSON()),
-            filters: Utils.deepClone(this.filters),
-            sortConfig: Utils.deepClone(this.sortConfig),
-            createdAt: new Date().toISOString(),
-            id: Utils.generateId()
-        };
-
-        this.backupHistory.push(backup);
-
-        // Keep only last 10 backups
-        if (this.backupHistory.length > 10) {
-            this.backupHistory.shift();
-        }
-
-        console.log(`💾 Backup created: ${backup.id}`);
-        return backup.id;
-    }
-
-    restoreFromBackup(backupId) {
-        const backup = this.backupHistory.find(b => b.id === backupId);
-        if (!backup) {
-            throw new Error(`Backup not found: ${backupId}`);
-        }
-
+    /**
+     * Create a backup with metadata
+     */
+    createBackup(description = '') {
         try {
-            this.activities = backup.activities.map(data => new ActivityModel(data));
-            this.filters = Utils.deepClone(backup.filters);
-            this.sortConfig = Utils.deepClone(backup.sortConfig);
+            const backupId = this.createMemorySnapshot();
 
-            this.sortActivities();
-            this.applyFilters();
+            if (backupId && description) {
+                const backup = this.backupHistory.find(b => b.id === backupId);
+                if (backup) {
+                    backup.description = description;
+                }
+            }
+
+            return backupId;
+        } catch (error) {
+            console.error('Failed to create backup:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Restore from backup with validation
+     */
+    async restoreFromBackup(backupId) {
+        try {
+            const backup = this.backupHistory.find(b => b.id === backupId);
+            if (!backup) {
+                throw new Error(`Backup not found: ${backupId}`);
+            }
+
+            // Validate backup data
+            if (!backup.activities || !Array.isArray(backup.activities)) {
+                throw new Error('Invalid backup data format');
+            }
+
+            // Create restore point before restoring
+            const restorePointId = this.createMemorySnapshot();
+            console.log(`Created restore point: ${restorePointId}`);
+
+            // Restore data
+            this.activities = backup.activities.map(data => new ActivityModel(data));
+            this.filters = Utils.deepClone(backup.filters) || this.createDefaultFilters();
+            this.sortConfig = Utils.deepClone(backup.sortConfig) || { field: 'date', order: 'asc' };
+
+            await Promise.all([
+                this.sortActivities(),
+                this.applyFilters()
+            ]);
+
             this.markDirty();
 
             console.log(`🔄 Restored from backup: ${backupId}`);
             this.emit(EVENTS.DATA_UPDATED);
 
             return true;
+
         } catch (error) {
             console.error('Failed to restore backup:', error);
             throw new Error(`Backup restoration failed: ${error.message}`);
         }
     }
 
+    /**
+     * Get list of available backups with metadata
+     */
     getBackupList() {
         return this.backupHistory.map(backup => ({
             id: backup.id,
-            createdAt: backup.createdAt,
-            activitiesCount: backup.activities.length,
-            size: JSON.stringify(backup).length
-        }));
+            description: backup.description || `Backup ${backup.timestamp}`,
+            createdAt: backup.createdAt || backup.timestamp,
+            activitiesCount: backup.activities ? backup.activities.length : 0,
+            size: JSON.stringify(backup).length,
+            version: backup.version || '1.0.0'
+        })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
-    // Data synchronization placeholder
-    async syncData(remoteData) {
-        console.log('Sync functionality not implemented yet');
-        return {
-            success: false,
-            message: 'Cloud sync not available in this version'
-        };
+    /**
+     * Delete a specific backup
+     */
+    deleteBackup(backupId) {
+        const index = this.backupHistory.findIndex(b => b.id === backupId);
+        if (index === -1) {
+            throw new Error(`Backup not found: ${backupId}`);
+        }
+
+        this.backupHistory.splice(index, 1);
+        console.log(`🗑️ Deleted backup: ${backupId}`);
+        return true;
     }
 
-    getDataFingerprint() {
-        const data = {
-            activitiesCount: this.activities.length,
-            lastModified: this.lastSaved,
-            totalCost: this.activities.reduce((sum, a) => sum + a.cost, 0),
-            activityIds: this.activities.map(a => a.id).sort()
-        };
+    // ==================== BATCH OPERATIONS ====================
 
-        // Simple hash function for fingerprint
-        return btoa(JSON.stringify(data)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
-    }
-
-    // Emergency recovery
-    async emergencyRecover() {
-        console.log('🚨 Starting emergency data recovery...');
-
-        const recoveryResults = {
-            recovered: 0,
-            sources: []
+    /**
+     * Perform batch operations on multiple activities
+     */
+    async batchOperation(operation, activityIds, data = {}) {
+        const results = {
+            successful: [],
+            failed: []
         };
 
         try {
-            // Try to recover from latest backup
-            if (this.backupHistory.length > 0) {
-                const latestBackup = this.backupHistory[this.backupHistory.length - 1];
-                this.activities = latestBackup.activities.map(data => new ActivityModel(data));
-                recoveryResults.recovered = this.activities.length;
-                recoveryResults.sources.push('Latest backup');
-                console.log(`✅ Recovered ${this.activities.length} activities from backup`);
+            for (const id of activityIds) {
+                try {
+                    let result;
+                    switch (operation) {
+                        case 'delete':
+                            result = await this.deleteActivity(id);
+                            break;
+                        case 'update':
+                            result = await this.updateActivity(id, data);
+                            break;
+                        case 'duplicate':
+                            result = await this.duplicateActivity(id);
+                            break;
+                        default:
+                            throw new Error(`Unknown operation: ${operation}`);
+                    }
+                    results.successful.push({ id, result });
+                } catch (error) {
+                    results.failed.push({ id, error: error.message });
+                }
             }
 
-            if (recoveryResults.recovered > 0) {
-                this.sortActivities();
-                this.applyFilters();
-                this.markDirty();
-                this.emit(EVENTS.DATA_UPDATED);
-
-                console.log('🎉 Emergency recovery completed successfully');
-            } else {
-                console.log('❌ No recoverable data found');
-            }
+            console.log(`📦 Batch ${operation}: ${results.successful.length} successful, ${results.failed.length} failed`);
+            return results;
 
         } catch (error) {
-            console.error('Emergency recovery failed:', error);
-            recoveryResults.error = error.message;
+            console.error('Batch operation failed:', error);
+            throw error;
         }
-
-        return recoveryResults;
     }
 
-    // Utility methods for UI integration
+    // ==================== UTILITY METHODS ====================
+
+    /**
+     * Get filtered activities
+     */
     getFilteredActivities() {
         return this.filteredActivities;
     }
 
+    /**
+     * Get all activities
+     */
     getAllActivities() {
         return this.activities;
     }
 
+    /**
+     * Get activity count
+     */
     getActivityCount() {
         return this.activities.length;
     }
 
+    /**
+     * Get filtered count
+     */
     getFilteredCount() {
         return this.filteredActivities.length;
     }
 
+    /**
+     * Get current filters
+     */
     getCurrentFilters() {
         return Utils.deepClone(this.filters);
     }
 
+    /**
+     * Get current sort configuration
+     */
     getCurrentSort() {
         return Utils.deepClone(this.sortConfig);
     }
 
+    /**
+     * Clear all filters
+     */
     clearAllFilters() {
-        this.filters = Utils.deepClone(DEFAULT_FILTERS);
-        this.applyFilters();
-        this.markDirty();
-        this.emit(EVENTS.FILTER_CHANGED, this.filters);
+        this.resetFilters();
     }
 
-    // Performance optimization
-    batchUpdate(operations) {
-        const results = [];
-        let hasChanges = false;
+    /**
+     * Check if data manager is ready
+     */
+    isReady() {
+        return this.isInitialized && !this.isLoading;
+    }
 
-        operations.forEach(operation => {
-            try {
-                switch (operation.type) {
-                    case 'add':
-                        const added = this.addActivity(operation.data);
-                        results.push({ success: true, id: added.id, operation: 'add' });
-                        hasChanges = true;
-                        break;
+    /**
+     * Get deleted activities for recovery
+     */
+    getDeletedActivities() {
+        return this.deletedActivities.map((item, index) => ({
+            ...item,
+            index,
+            timeDeleted: item.deletedAt
+        }));
+    }
 
-                    case 'update':
-                        const updated = this.updateActivity(operation.id, operation.data);
-                        results.push({ success: true, id: updated.id, operation: 'update' });
-                        hasChanges = true;
-                        break;
+    /**
+     * Get memory usage information
+     */
+    getMemoryUsage() {
+        const activitiesSize = JSON.stringify(this.activities).length * 2; // UTF-16
+        const backupsSize = JSON.stringify(this.backupHistory).length * 2;
+        const filtersSize = JSON.stringify(this.filters).length * 2;
+        const cacheSize = JSON.stringify([...this.cache.values()]).length * 2;
 
-                    case 'delete':
-                        this.deleteActivity(operation.id);
-                        results.push({ success: true, id: operation.id, operation: 'delete' });
-                        hasChanges = true;
-                        break;
-
-                    default:
-                        results.push({
-                            success: false,
-                            error: `Unknown operation: ${operation.type}`,
-                            operation: operation.type
-                        });
-                }
-            } catch (error) {
-                results.push({
-                    success: false,
-                    error: error.message,
-                    operation: operation.type,
-                    id: operation.id
-                });
+        return {
+            activities: activitiesSize,
+            backups: backupsSize,
+            filters: filtersSize,
+            cache: cacheSize,
+            total: activitiesSize + backupsSize + filtersSize + cacheSize,
+            formatted: {
+                activities: Utils.formatFileSize ? Utils.formatFileSize(activitiesSize) : `${Math.round(activitiesSize / 1024)}KB`,
+                backups: Utils.formatFileSize ? Utils.formatFileSize(backupsSize) : `${Math.round(backupsSize / 1024)}KB`,
+                filters: Utils.formatFileSize ? Utils.formatFileSize(filtersSize) : `${Math.round(filtersSize / 1024)}KB`,
+                cache: Utils.formatFileSize ? Utils.formatFileSize(cacheSize) : `${Math.round(cacheSize / 1024)}KB`,
+                total: Utils.formatFileSize ? Utils.formatFileSize(activitiesSize + backupsSize + filtersSize + cacheSize) : `${Math.round((activitiesSize + backupsSize + filtersSize + cacheSize) / 1024)}KB`
             }
+        };
+    }
+
+    /**
+     * Get performance statistics
+     */
+    getPerformanceStats() {
+        return {
+            ...this.stats,
+            cacheHitRatio: this.stats.cacheHits / (this.stats.cacheHits + this.stats.cacheMisses) || 0,
+            averageFilterTime: this.stats.lastFilterTime,
+            averageSortTime: this.stats.lastSortTime,
+            memoryUsage: this.getMemoryUsage()
+        };
+    }
+
+    /**
+     * Search activities with advanced options
+     */
+    searchActivities(query, options = {}) {
+        const {
+            fields = ['activity', 'startFrom', 'reachTo', 'additionalDetails'],
+            fuzzy = false,
+            limit = null
+        } = options;
+
+        const searchTerm = query.toLowerCase().trim();
+        if (!searchTerm) return [];
+
+        let results = this.activities.filter(activity => {
+            return fields.some(field => {
+                const value = activity[field];
+                if (!value) return false;
+
+                if (fuzzy) {
+                    // Simple fuzzy matching
+                    return this.fuzzyMatch(value.toLowerCase(), searchTerm);
+                } else {
+                    return value.toLowerCase().includes(searchTerm);
+                }
+            });
         });
 
-        // Only sort and filter once at the end
-        if (hasChanges) {
-            this.sortActivities();
-            this.applyFilters();
-            this.emit(EVENTS.DATA_UPDATED);
+        if (limit && results.length > limit) {
+            results = results.slice(0, limit);
         }
 
         return results;
     }
 
-    // Cleanup and disposal
-    async dispose() {
-        console.log('🧹 Starting DataManager disposal...');
+    /**
+     * Simple fuzzy matching implementation
+     */
+    fuzzyMatch(text, pattern) {
+        const textLength = text.length;
+        const patternLength = pattern.length;
 
-        // Create final backup if dirty
-        if (this.isDirty) {
-            console.log('💾 Creating final backup...');
-            this.createBackup();
+        if (patternLength > textLength) return false;
+        if (patternLength === textLength) return text === pattern;
+
+        let textIndex = 0;
+        let patternIndex = 0;
+
+        while (textIndex < textLength && patternIndex < patternLength) {
+            if (text[textIndex] === pattern[patternIndex]) {
+                patternIndex++;
+            }
+            textIndex++;
         }
 
-        // Clear all timers
-        if (this.autoSaveTimer) {
-            clearInterval(this.autoSaveTimer);
-            this.autoSaveTimer = null;
-            console.log('⏰ Auto-save timer cleared');
-        }
+        return patternIndex === patternLength;
+    }
 
-        // Remove all event listeners
-        this.removeAllListeners();
-        console.log('📢 Event listeners cleared');
+    /**
+     * Validate data integrity
+     */
+    validateDataIntegrity() {
+        const issues = [];
 
-        // Clear all data references
-        this.activities = [];
-        this.filteredActivities = [];
-        this.deletedActivities = [];
-        this.backupHistory = [];
-        this.filters = Utils.deepClone(DEFAULT_FILTERS);
+        this.activities.forEach((activity, index) => {
+            try {
+                if (this.config.enableValidation) {
+                    const validation = activity.validate ? activity.validate() : { isValid: true, errors: [] };
+                    if (!validation.isValid) {
+                        issues.push({
+                            type: 'validation',
+                            index,
+                            activityId: activity.id,
+                            errors: validation.errors
+                        });
+                    }
+                }
 
-        // Reset state
-        this.isDirty = false;
-        this.isLoading = false;
-        this.lastSaved = null;
+                // Check for duplicate IDs
+                const duplicateIndex = this.activities.findIndex((other, otherIndex) =>
+                    otherIndex !== index && other.id === activity.id
+                );
+                if (duplicateIndex !== -1) {
+                    issues.push({
+                        type: 'duplicate_id',
+                        index,
+                        duplicateIndex,
+                        activityId: activity.id
+                    });
+                }
 
-        // Clear stats
-        this.stats = {
-            totalOperations: 0,
-            lastFilterTime: 0,
-            lastSortTime: 0
+            } catch (error) {
+                issues.push({
+                    type: 'error',
+                    index,
+                    activityId: activity.id,
+                    error: error.message
+                });
+            }
+        });
+
+        return {
+            isValid: issues.length === 0,
+            issues,
+            totalActivities: this.activities.length
         };
+    }
 
-        console.log('✅ DataManager disposal completed');
+    // ==================== CLEANUP AND DISPOSAL ====================
+
+    /**
+     * Cleanup browser event listeners
+     */
+    cleanupBrowserEvents() {
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        }
+
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        }
+    }
+
+    /**
+     * Dispose of data manager and clean up resources
+     */
+    async dispose() {
+        try {
+            console.log('🧹 Starting Enhanced DataManager disposal...');
+
+            // Create final backup if dirty
+            if (this.isDirty) {
+                console.log('💾 Creating final backup...');
+                this.createBackup('Final backup before disposal');
+            }
+
+            // Clear auto-save timer
+            if (this.autoSaveTimer) {
+                clearInterval(this.autoSaveTimer);
+                this.autoSaveTimer = null;
+                console.log('⏰ Auto-save timer cleared');
+            }
+
+            // Cleanup browser events
+            this.cleanupBrowserEvents();
+
+            // Remove all event listeners
+            this.removeAllListeners();
+            console.log('📢 Event listeners cleared');
+
+            // Clear cache
+            this.invalidateCache();
+            console.log('🗄️ Cache cleared');
+
+            // Clear all data references
+            this.activities = [];
+            this.filteredActivities = [];
+            this.deletedActivities = [];
+            this.backupHistory = [];
+            this.filters = this.createDefaultFilters();
+
+            // Reset state
+            this.isDirty = false;
+            this.isLoading = false;
+            this.isInitialized = false;
+            this.lastSaved = null;
+
+            // Clear stats
+            this.stats = {
+                totalOperations: 0,
+                lastFilterTime: 0,
+                lastSortTime: 0,
+                cacheHits: 0,
+                cacheMisses: 0
+            };
+
+            console.log('✅ Enhanced DataManager disposal completed');
+
+        } catch (error) {
+            console.error('Error during disposal:', error);
+        }
     }
 }
 
-// ES6 Module Exports
-export {
-    TravelDataManager as DataManager,  // Export as DataManager to match import
-    TravelDataManager,                 // Also export original name
-    ActivityModel,
-    Utils,
-    EVENTS,
-    DEFAULT_FILTERS,
-    EventEmitter
-};
-
-// Default export
-export default TravelDataManager;
-
-// CommonJS compatibility
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        DataManager: TravelDataManager,     // Match the import name
-        TravelDataManager,
-        ActivityModel,
-        Utils,
-        EVENTS,
-        DEFAULT_FILTERS,
-        EventEmitter,
-        default: TravelDataManager
-    };
-}
-
-// Example usage and initialization
-/*
-// Create a new instance
-const dataManager = new TravelDataManager();
-
-// Add some sample activities
-dataManager.addActivity({
-    activity: 'Visit Sydney Opera House',
-    date: '2025-08-15',
-    time: '14:00',
-    reachTo: 'Sydney Opera House',
-    transportMode: 'train',
-    cost: 45.00,
-    booking: 'required',
-    category: 'sightseeing',
-    notes: 'Book tickets in advance'
-});
-
-// Listen for events
-dataManager.on(EVENTS.DATA_UPDATED, () => {
-    console.log('Data has been updated!');
-});
-
-// Filter activities
-dataManager.updateFilters({
-    searchText: 'sydney',
-    costRange: { min: 0, max: 100 }
-});
-
-// Export data
-const exportedData = await dataManager.exportData('json');
-console.log('Exported:', exportedData);
-*/
+// Export as both named and default for maximum compatibility
+export default DataManager;
