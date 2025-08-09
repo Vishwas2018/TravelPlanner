@@ -1,10 +1,9 @@
 /**
- * Travel Itinerary Manager - Enhanced Application with Card Toggle Support
- * Complete application with working edit/delete functionality and click-to-expand cards
+ * Travel Itinerary Manager - Fixed Application with Working Add Activity
  */
 
 import { DataManager } from '../data/DataManager.js';
-import { DashboardView, ItineraryView, TimelineView } from '../views/Views.js';
+import { DashboardView, ItineraryView, TimelineView, initializeItineraryView } from '../views/Views.js';
 import { notificationService } from '../services/NotificationService.js';
 import { VIEWS, EVENTS, SUCCESS_MESSAGES } from '../core/constants.js';
 import { Utils } from '../core/utils.js';
@@ -267,9 +266,16 @@ export class Application {
     }
 
     registerViews() {
-        this.views.set(VIEWS.DASHBOARD, new DashboardView(this.dataManager));
-        this.views.set(VIEWS.ITINERARY, new ItineraryView(this.dataManager));
-        this.views.set(VIEWS.TIMELINE, new TimelineView(this.dataManager));
+        const dashboardView = new DashboardView(this.dataManager);
+        const itineraryView = new ItineraryView(this.dataManager);
+        const timelineView = new TimelineView(this.dataManager);
+
+        this.views.set(VIEWS.DASHBOARD, dashboardView);
+        this.views.set(VIEWS.ITINERARY, itineraryView);
+        this.views.set(VIEWS.TIMELINE, timelineView);
+
+        // Initialize enhanced itinerary view
+        initializeItineraryView(itineraryView);
     }
 
     async navigateToView(viewName) {
@@ -315,6 +321,7 @@ export class Application {
     }
 
     openAddActivityModal() {
+        console.log('openAddActivityModal called');
         this.showActivityModal();
     }
 
@@ -359,115 +366,193 @@ export class Application {
     }
 
     showActivityModal(activity = null) {
-        const isEdit = !!activity;
-        const modal = this.createModal();
+        console.log('showActivityModal called with activity:', activity);
 
-        modal.innerHTML = `
-            <div class="modal-header">
-                <h2 class="modal-title">${isEdit ? 'Edit' : 'Add'} Activity</h2>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="activityForm" class="modal-form">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label required">Activity Name</label>
-                            <input type="text" class="form-input" name="activity" required 
-                                   value="${activity?.activity || ''}" placeholder="e.g., Flight to Paris">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Date</label>
-                            <input type="date" class="form-input" name="date" required 
-                                   value="${activity?.date || new Date().toISOString().split('T')[0]}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Start Time</label>
-                            <input type="time" class="form-input" name="startTime" 
-                                   value="${activity?.startTime || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">End Time</label>
-                            <input type="time" class="form-input" name="endTime" 
-                                   value="${activity?.endTime || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">From</label>
-                            <input type="text" class="form-input" name="startFrom" 
-                                   value="${activity?.startFrom || ''}" placeholder="Starting location">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">To</label>
-                            <input type="text" class="form-input" name="reachTo" 
-                                   value="${activity?.reachTo || ''}" placeholder="Destination">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Transport</label>
-                            <select class="form-select" name="transportMode">
-                                <option value="">Select transport mode</option>
-                                <option value="Flight" ${activity?.transportMode === 'Flight' ? 'selected' : ''}>✈️ Flight</option>
-                                <option value="Train" ${activity?.transportMode === 'Train' ? 'selected' : ''}>🚄 Train</option>
-                                <option value="Car" ${activity?.transportMode === 'Car' ? 'selected' : ''}>🚗 Car</option>
-                                <option value="Bus" ${activity?.transportMode === 'Bus' ? 'selected' : ''}>🚌 Bus</option>
-                                <option value="Uber" ${activity?.transportMode === 'Uber' ? 'selected' : ''}>🚕 Uber</option>
-                                <option value="Walking" ${activity?.transportMode === 'Walking' ? 'selected' : ''}>🚶 Walking</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Booking Status</label>
-                            <select class="form-select" name="booking">
-                                <option value="FALSE" ${activity?.booking === 'FALSE' ? 'selected' : ''}>Not Booked</option>
-                                <option value="TRUE" ${activity?.booking === 'TRUE' ? 'selected' : ''}>Booked</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Cost ($)</label>
-                            <input type="number" class="form-input" name="cost" min="0" step="0.01" 
-                                   value="${activity?.cost || 0}">
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Additional Details</label>
-                            <textarea class="form-textarea" name="additionalDetails" rows="3" 
-                                      placeholder="Any additional notes or details">${activity?.additionalDetails || ''}</textarea>
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Accommodation</label>
-                            <input type="text" class="form-input" name="accommodationDetails" 
-                                   value="${activity?.accommodationDetails || ''}" placeholder="Hotel, booking details, etc.">
-                        </div>
+        const isEdit = !!activity;
+        const today = new Date().toISOString().split('T')[0];
+
+        // Create modal overlay
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+
+        modalOverlay.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">${isEdit ? 'Edit' : 'Add'} Activity</h2>
+                        <button class="modal-close" type="button">×</button>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                <button class="btn btn-primary" onclick="app.saveActivity('${activity?.id || ''}')">
-                    ${isEdit ? 'Update' : 'Add'} Activity
-                </button>
+                    <div class="modal-body">
+                        <form id="activityForm" class="modal-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label required">Activity Name</label>
+                                    <input type="text" class="form-input" name="activity" required 
+                                           value="${activity?.activity || ''}" placeholder="e.g., Flight to Paris">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label required">Date</label>
+                                    <input type="date" class="form-input" name="date" required 
+                                           value="${activity?.date || today}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Start Time</label>
+                                    <input type="time" class="form-input" name="startTime" 
+                                           value="${activity?.startTime || ''}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">End Time</label>
+                                    <input type="time" class="form-input" name="endTime" 
+                                           value="${activity?.endTime || ''}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">From</label>
+                                    <input type="text" class="form-input" name="startFrom" 
+                                           value="${activity?.startFrom || ''}" placeholder="Starting location">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">To</label>
+                                    <input type="text" class="form-input" name="reachTo" 
+                                           value="${activity?.reachTo || ''}" placeholder="Destination">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Transport</label>
+                                    <select class="form-select" name="transportMode">
+                                        <option value="">Select transport mode</option>
+                                        <option value="Flight" ${activity?.transportMode === 'Flight' ? 'selected' : ''}>✈️ Flight</option>
+                                        <option value="Train" ${activity?.transportMode === 'Train' ? 'selected' : ''}>🚄 Train</option>
+                                        <option value="Car" ${activity?.transportMode === 'Car' ? 'selected' : ''}>🚗 Car</option>
+                                        <option value="Bus" ${activity?.transportMode === 'Bus' ? 'selected' : ''}>🚌 Bus</option>
+                                        <option value="Uber" ${activity?.transportMode === 'Uber' ? 'selected' : ''}>🚕 Uber</option>
+                                        <option value="Walking" ${activity?.transportMode === 'Walking' ? 'selected' : ''}>🚶 Walking</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Booking Status</label>
+                                    <select class="form-select" name="booking">
+                                        <option value="FALSE" ${activity?.booking === 'FALSE' || !activity?.booking ? 'selected' : ''}>Not Booked</option>
+                                        <option value="TRUE" ${activity?.booking === 'TRUE' ? 'selected' : ''}>Booked</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Cost ($)</label>
+                                    <input type="number" class="form-input" name="cost" min="0" step="0.01" 
+                                           value="${activity?.cost || 0}">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="form-label">Additional Details</label>
+                                    <textarea class="form-textarea" name="additionalDetails" rows="3" 
+                                              placeholder="Any additional notes or details">${activity?.additionalDetails || ''}</textarea>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="form-label">Accommodation</label>
+                                    <input type="text" class="form-input" name="accommodationDetails" 
+                                           value="${activity?.accommodationDetails || ''}" placeholder="Hotel, booking details, etc.">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+                        <button type="button" class="btn btn-primary modal-save" data-activity-id="${activity?.id || ''}">
+                            ${isEdit ? 'Update' : 'Add'} Activity
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
 
-        document.body.appendChild(modal);
-        modal.classList.add('active');
+        // Add to document
+        document.body.appendChild(modalOverlay);
+
+        // Setup event listeners
+        const closeModal = () => modalOverlay.remove();
+
+        modalOverlay.querySelector('.modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.modal-cancel').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.modal-save').addEventListener('click', () => {
+            this.saveActivity(activity?.id || '');
+        });
+
+        // Click outside to close
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        // Escape key to close
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        // Show modal with animation
+        setTimeout(() => {
+            modalOverlay.classList.add('active');
+            // Focus first input
+            modalOverlay.querySelector('input[name="activity"]')?.focus();
+        }, 10);
+
+        console.log('Modal created and displayed');
     }
 
     saveActivity(activityId = '') {
+        console.log('saveActivity called with ID:', activityId);
+
         const form = document.getElementById('activityForm');
-        if (!form) return;
+        if (!form) {
+            console.error('Form not found');
+            notificationService.error('Form not found');
+            return;
+        }
+
+        // Validate required fields
+        const activityName = form.querySelector('[name="activity"]').value.trim();
+        const date = form.querySelector('[name="date"]').value;
+
+        if (!activityName) {
+            notificationService.error('Activity name is required');
+            form.querySelector('[name="activity"]').focus();
+            return;
+        }
+
+        if (!date) {
+            notificationService.error('Date is required');
+            form.querySelector('[name="date"]').focus();
+            return;
+        }
 
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
 
+        // Ensure cost is a number
+        data.cost = parseFloat(data.cost) || 0;
+
+        console.log('Form data collected:', data);
+
         try {
-            if (activityId) {
+            if (activityId && activityId !== '') {
                 console.log('Updating activity with ID:', activityId, 'Data:', data);
                 this.dataManager.updateActivity(activityId, data);
+                notificationService.success('Activity updated successfully!');
             } else {
                 console.log('Adding new activity with data:', data);
                 this.dataManager.addActivity(data);
+                notificationService.success('Activity added successfully!');
             }
-            document.querySelector('.modal-overlay').remove();
+
+            // Close modal
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+
+            console.log('Activity saved successfully');
         } catch (error) {
             console.error('Error saving activity:', error);
-            notificationService.error(error.message);
+            notificationService.error(`Failed to save activity: ${error.message}`);
         }
     }
 
@@ -496,8 +581,8 @@ export class Application {
                 <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
             </div>
         `;
-        document.body.appendChild(modal);
-        modal.classList.add('active');
+        document.body.appendChild(modal.parentElement);
+        modal.parentElement.classList.add('active');
     }
 
     exportData(format) {
@@ -546,8 +631,8 @@ export class Application {
                 <button class="btn btn-secondary" onclick="app.downloadTemplate()">📥 Download Template</button>
             </div>
         `;
-        document.body.appendChild(modal);
-        modal.classList.add('active');
+        document.body.appendChild(modal.parentElement);
+        modal.parentElement.classList.add('active');
     }
 
     downloadTemplate() {
@@ -600,10 +685,44 @@ Hotel Check-in,2025-09-19,19:00,20:00,London Heathrow,Hotel London,Taxi,TRUE,150
     }
 
     createModal() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = '<div class="modal-dialog"><div class="modal-content"></div></div>';
-        return modal.querySelector('.modal-content');
+        // Remove any existing modals
+        const existingModal = document.querySelector('.modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+
+        const modalDialog = document.createElement('div');
+        modalDialog.className = 'modal-dialog';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+
+        modalDialog.appendChild(modalContent);
+        modalOverlay.appendChild(modalDialog);
+
+        // Add to DOM immediately
+        document.body.appendChild(modalOverlay);
+
+        // Add click outside to close
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.remove();
+            }
+        });
+
+        // Add escape key to close
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modalOverlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        return modalContent;
     }
 
     toggleTheme() {

@@ -1,5 +1,5 @@
 /**
- * Enhanced Views.js - Click-to-expand cards with complete details
+ * Complete Views.js - All Views with Enhanced ItineraryView
  */
 
 import { Utils } from '../core/utils.js';
@@ -8,7 +8,7 @@ import { Utils } from '../core/utils.js';
 export class DashboardView {
     constructor(dataManager) {
         this.dataManager = dataManager;
-        this.expandedCards = new Set(); // Track expanded state
+        this.expandedCards = new Set();
     }
 
     render() {
@@ -108,7 +108,6 @@ export class DashboardView {
                 <div class="activity-priority-indicator ${this.getPriorityClass(activity)}"></div>
                 
                 <div class="activity-card-content">
-                    <!-- Compact Header -->
                     <div class="activity-main-info">
                         <div class="activity-transport-icon">
                             ${Utils.getTransportIcon(activity.transportMode) || '📌'}
@@ -128,7 +127,6 @@ export class DashboardView {
                         <div class="activity-status-indicator ${activity.isBooked() ? 'booked' : 'not-booked'}"></div>
                     </div>
                     
-                    <!-- Floating Actions -->
                     <div class="activity-floating-actions" onclick="event.stopPropagation()">
                         <button class="floating-action-btn edit" onclick="handleEditActivity('${activity.id}')" title="Edit">
                             ✏️
@@ -141,12 +139,10 @@ export class DashboardView {
                         </button>
                     </div>
                     
-                    <!-- Booking Status Chip -->
                     <div class="booking-status-chip ${activity.isBooked() ? 'booked' : 'not-booked'}">
                         ${activity.isBooked() ? 'Booked' : 'Pending'}
                     </div>
                     
-                    <!-- Expanded Content -->
                     <div class="activity-expanded-content ${isExpanded ? 'visible' : 'hidden'}">
                         ${this.renderCompleteDetails(activity)}
                     </div>
@@ -158,33 +154,11 @@ export class DashboardView {
     renderCompleteDetails(activity) {
         return `
             <div class="complete-details-grid">
-                <!-- Activity Name -->
                 <div class="detail-row full-width">
                     <div class="detail-icon">🎯</div>
                     <div class="detail-label">Activity:</div>
                     <div class="detail-value activity-name-detail">${Utils.escapeHtml(activity.activity)}</div>
                 </div>
-
-                <!-- Date & Time -->
-                <div class="detail-row">
-                    <div class="detail-icon">📅</div>
-                    <div class="detail-label">Date:</div>
-                    <div class="detail-value">${Utils.formatDate(activity.date, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-icon">🕐</div>
-                    <div class="detail-label">Start Time:</div>
-                    <div class="detail-value">${activity.startTime ? Utils.formatTime(activity.startTime) : 'Not specified'}</div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-icon">🕐</div>
-                    <div class="detail-label">Finish Time:</div>
-                    <div class="detail-value">${activity.endTime ? Utils.formatTime(activity.endTime) : 'Not specified'}</div>
-                </div>
-
-                <!-- Locations -->
                 ${activity.startFrom ? `
                 <div class="detail-row">
                     <div class="detail-icon">📍</div>
@@ -192,7 +166,6 @@ export class DashboardView {
                     <div class="detail-value">${Utils.escapeHtml(activity.startFrom)}</div>
                 </div>
                 ` : ''}
-
                 ${activity.reachTo ? `
                 <div class="detail-row">
                     <div class="detail-icon">🎯</div>
@@ -200,35 +173,6 @@ export class DashboardView {
                     <div class="detail-value">${Utils.escapeHtml(activity.reachTo)}</div>
                 </div>
                 ` : ''}
-
-                <!-- Transport -->
-                ${activity.transportMode ? `
-                <div class="detail-row">
-                    <div class="detail-icon">${Utils.getTransportIcon(activity.transportMode)}</div>
-                    <div class="detail-label">Transport:</div>
-                    <div class="detail-value">${activity.transportMode}</div>
-                </div>
-                ` : ''}
-
-                <!-- Booking Required -->
-                <div class="detail-row">
-                    <div class="detail-icon">${activity.isBooked() ? '✅' : '❌'}</div>
-                    <div class="detail-label">Booking Required:</div>
-                    <div class="detail-value booking-status ${activity.isBooked() ? 'confirmed' : 'pending'}">
-                        ${activity.isBooked() ? 'Yes - Confirmed' : 'Yes - Pending'}
-                    </div>
-                </div>
-
-                <!-- Booking Details (if booked) -->
-                ${activity.isBooked() && activity.accommodationDetails ? `
-                <div class="detail-row full-width">
-                    <div class="detail-icon">📋</div>
-                    <div class="detail-label">Booking Details:</div>
-                    <div class="detail-value booking-details">${Utils.escapeHtml(activity.accommodationDetails)}</div>
-                </div>
-                ` : ''}
-
-                <!-- Cost -->
                 ${activity.cost > 0 ? `
                 <div class="detail-row">
                     <div class="detail-icon">💰</div>
@@ -236,17 +180,6 @@ export class DashboardView {
                     <div class="detail-value cost-highlight">${Utils.formatCurrency(activity.cost)}</div>
                 </div>
                 ` : ''}
-
-                <!-- Duration -->
-                ${activity.getDuration() ? `
-                <div class="detail-row">
-                    <div class="detail-icon">⏱️</div>
-                    <div class="detail-label">Duration:</div>
-                    <div class="detail-value">${activity.getFormattedDuration()}</div>
-                </div>
-                ` : ''}
-
-                <!-- Notes -->
                 ${activity.additionalDetails ? `
                 <div class="detail-row full-width notes-section">
                     <div class="detail-icon">📝</div>
@@ -256,12 +189,6 @@ export class DashboardView {
                 ` : ''}
             </div>
         `;
-    }
-
-    getPriorityClass(activity) {
-        if (activity.cost > 1000) return 'high';
-        if (activity.cost < 100) return 'low';
-        return 'normal';
     }
 
     renderCostBreakdown(breakdown) {
@@ -309,6 +236,12 @@ export class DashboardView {
         `;
     }
 
+    getPriorityClass(activity) {
+        if (activity.cost > 1000) return 'high';
+        if (activity.cost < 100) return 'low';
+        return 'normal';
+    }
+
     toggleCard(activityId) {
         if (this.expandedCards.has(activityId)) {
             this.expandedCards.delete(activityId);
@@ -324,6 +257,7 @@ export class ItineraryView {
         this.dataManager = dataManager;
         this.viewMode = 'grouped';
         this.expandedCards = new Set();
+        this.persistentlyExpanded = new Set();
     }
 
     render() {
@@ -379,13 +313,14 @@ export class ItineraryView {
 
         return `
             <div class="grouped-view">
-                ${sortedDates.map(date => {
+                ${sortedDates.map((date, index) => {
             const dayActivities = groupedActivities[date];
             const dayStats = this.calculateDayStats(dayActivities);
+            const dayNumber = index + 1;
 
             return `
                         <div class="date-group">
-                            ${this.renderDateGroupHeader(date, dayActivities, dayStats)}
+                            ${this.renderDayGroupHeader(date, dayActivities, dayStats, dayNumber)}
                             <div class="activity-list">
                                 ${dayActivities.map(activity => this.renderEnhancedActivityCard(activity)).join('')}
                             </div>
@@ -396,16 +331,20 @@ export class ItineraryView {
         `;
     }
 
-    renderDateGroupHeader(date, activities, stats) {
-        const dayName = Utils.formatDate(date, { weekday: 'long' });
-        const formattedDate = Utils.formatDate(date, { month: 'short', day: 'numeric' });
-        const relativeTime = Utils.getRelativeTime(date);
+    renderDayGroupHeader(date, activities, stats, dayNumber) {
+        const dateObj = new Date(date);
+        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        const formattedDate = dateObj.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
 
         return `
             <div class="date-group-header">
                 <div>
-                    <h3 class="date-group-title">${dayName}, ${formattedDate}</h3>
-                    <p class="date-group-subtitle">${relativeTime} • ${activities.length} activities</p>
+                    <h3 class="date-group-title">Day ${dayNumber} (${dayName} - ${formattedDate})</h3>
+                    <p class="date-group-subtitle">${activities.length} activities planned</p>
                 </div>
                 <div class="date-group-stats">
                     <div class="date-stat-item">
@@ -422,17 +361,22 @@ export class ItineraryView {
     }
 
     renderEnhancedActivityCard(activity) {
-        const isExpanded = this.expandedCards.has(activity.id);
+        const isExpanded = this.expandedCards.has(activity.id) || this.persistentlyExpanded.has(activity.id);
+        const isHovered = this.expandedCards.has(activity.id) && !this.persistentlyExpanded.has(activity.id);
+        const isPersistent = this.persistentlyExpanded.has(activity.id);
+        const cardId = `card-${activity.id}`;
 
         return `
-            <div class="activity-card ${isExpanded ? 'expanded' : ''}" 
+            <div class="activity-card ${isExpanded ? 'expanded' : ''} ${isHovered ? 'hovered' : ''} ${isPersistent ? 'selected' : ''}" 
+                 id="${cardId}"
                  data-activity-id="${activity.id}"
-                 onclick="window.toggleActivityCard('${activity.id}', 'itinerary')">
+                 onmouseenter="window.itineraryView?.handleCardHover('${activity.id}', true)"
+                 onmouseleave="window.itineraryView?.handleCardHover('${activity.id}', false)"
+                 onclick="window.itineraryView?.handleCardClick('${activity.id}')">
                 
                 <div class="activity-priority-indicator ${this.getPriorityClass(activity)}"></div>
                 
                 <div class="activity-card-content">
-                    <!-- Compact Header -->
                     <div class="activity-main-info">
                         <div class="activity-transport-icon">
                             ${Utils.getTransportIcon(activity.transportMode) || '📌'}
@@ -451,26 +395,23 @@ export class ItineraryView {
                         </div>
                         <div class="activity-status-indicator ${activity.isBooked() ? 'booked' : 'not-booked'}"></div>
                     </div>
-
-                    <!-- Floating Actions -->
+                    
                     <div class="activity-floating-actions" onclick="event.stopPropagation()">
                         <button class="floating-action-btn edit" onclick="handleEditActivity('${activity.id}')" title="Edit">
                             ✏️
                         </button>
-                        <button class="floating-action-btn duplicate" onclick="handleDuplicateActivity('${activity.id}')" title="Duplicate">
+                        <button class="floating-action-btn duplicate" onclick="window.itineraryView?.handleDuplicateActivity('${activity.id}')" title="Copy">
                             📋
                         </button>
-                        <button class="floating-action-btn delete" onclick="handleDeleteActivity('${activity.id}')" title="Delete">
+                        <button class="floating-action-btn delete" onclick="window.itineraryView?.handleDeleteActivity('${activity.id}')" title="Delete">
                             🗑️
                         </button>
                     </div>
-
-                    <!-- Booking Status Chip -->
+                    
                     <div class="booking-status-chip ${activity.isBooked() ? 'booked' : 'not-booked'}">
                         ${activity.isBooked() ? 'Booked' : 'Pending'}
                     </div>
-
-                    <!-- Expanded Content -->
+                    
                     <div class="activity-expanded-content ${isExpanded ? 'visible' : 'hidden'}">
                         ${this.renderCompleteDetails(activity)}
                     </div>
@@ -493,7 +434,7 @@ export class ItineraryView {
                 <div class="detail-row">
                     <div class="detail-icon">📅</div>
                     <div class="detail-label">Date:</div>
-                    <div class="detail-value">${Utils.formatDate(activity.date, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+                    <div class="detail-value">${Utils.formatDate(activity.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
                 </div>
 
                 <div class="detail-row">
@@ -504,9 +445,18 @@ export class ItineraryView {
 
                 <div class="detail-row">
                     <div class="detail-icon">🕐</div>
-                    <div class="detail-label">Finish Time:</div>
+                    <div class="detail-label">End Time:</div>
                     <div class="detail-value">${activity.endTime ? Utils.formatTime(activity.endTime) : 'Not specified'}</div>
                 </div>
+
+                <!-- Duration -->
+                ${activity.getDuration() ? `
+                <div class="detail-row">
+                    <div class="detail-icon">⏱️</div>
+                    <div class="detail-label">Duration:</div>
+                    <div class="detail-value">${activity.getFormattedDuration()}</div>
+                </div>
+                ` : ''}
 
                 <!-- Locations -->
                 ${activity.startFrom ? `
@@ -534,23 +484,14 @@ export class ItineraryView {
                 </div>
                 ` : ''}
 
-                <!-- Booking Required -->
+                <!-- Booking Status -->
                 <div class="detail-row">
                     <div class="detail-icon">${activity.isBooked() ? '✅' : '❌'}</div>
-                    <div class="detail-label">Booking Required:</div>
+                    <div class="detail-label">Booking Status:</div>
                     <div class="detail-value booking-status ${activity.isBooked() ? 'confirmed' : 'pending'}">
-                        ${activity.isBooked() ? 'Yes - Confirmed' : 'Yes - Pending'}
+                        ${activity.isBooked() ? 'Booked' : 'Not Booked'}
                     </div>
                 </div>
-
-                <!-- Booking Details (if booked) -->
-                ${activity.isBooked() && activity.accommodationDetails ? `
-                <div class="detail-row full-width">
-                    <div class="detail-icon">📋</div>
-                    <div class="detail-label">Booking Details:</div>
-                    <div class="detail-value booking-details">${Utils.escapeHtml(activity.accommodationDetails)}</div>
-                </div>
-                ` : ''}
 
                 <!-- Cost -->
                 ${activity.cost > 0 ? `
@@ -561,21 +502,36 @@ export class ItineraryView {
                 </div>
                 ` : ''}
 
-                <!-- Duration -->
-                ${activity.getDuration() ? `
-                <div class="detail-row">
-                    <div class="detail-icon">⏱️</div>
-                    <div class="detail-label">Duration:</div>
-                    <div class="detail-value">${activity.getFormattedDuration()}</div>
+                <!-- Accommodation Details -->
+                ${activity.accommodationDetails ? `
+                <div class="detail-row full-width">
+                    <div class="detail-icon">🏨</div>
+                    <div class="detail-label">Accommodation:</div>
+                    <div class="detail-value booking-details">${Utils.escapeHtml(activity.accommodationDetails)}</div>
                 </div>
                 ` : ''}
 
-                <!-- Notes -->
+                <!-- Additional Details -->
                 ${activity.additionalDetails ? `
                 <div class="detail-row full-width notes-section">
                     <div class="detail-icon">📝</div>
-                    <div class="detail-label">Notes:</div>
+                    <div class="detail-label">Additional Details:</div>
                     <div class="detail-value notes-content">${Utils.escapeHtml(activity.additionalDetails)}</div>
+                </div>
+                ` : ''}
+
+                <!-- Created/Updated -->
+                <div class="detail-row">
+                    <div class="detail-icon">📅</div>
+                    <div class="detail-label">Created:</div>
+                    <div class="detail-value">${Utils.formatDate(activity.createdAt?.split('T')[0] || activity.date)}</div>
+                </div>
+
+                ${activity.updatedAt && activity.updatedAt !== activity.createdAt ? `
+                <div class="detail-row">
+                    <div class="detail-icon">🔄</div>
+                    <div class="detail-label">Last Updated:</div>
+                    <div class="detail-value">${Utils.formatDate(activity.updatedAt.split('T')[0])}</div>
                 </div>
                 ` : ''}
             </div>
@@ -613,16 +569,127 @@ export class ItineraryView {
         return 'normal';
     }
 
-    toggleCard(activityId) {
-        if (this.expandedCards.has(activityId)) {
-            this.expandedCards.delete(activityId);
-        } else {
+    // Enhanced interaction handlers
+    handleCardHover(activityId, isEntering) {
+        if (this.persistentlyExpanded.has(activityId)) return;
+
+        if (isEntering) {
             this.expandedCards.add(activityId);
+        } else {
+            this.expandedCards.delete(activityId);
         }
+        this.updateCardState(activityId);
+    }
+
+    handleCardClick(activityId) {
+        if (this.persistentlyExpanded.has(activityId)) {
+            this.persistentlyExpanded.delete(activityId);
+        } else {
+            this.persistentlyExpanded.add(activityId);
+        }
+        this.updateCardState(activityId);
+    }
+
+    handleDeleteActivity(activityId) {
+        const activity = window.app.dataManager.getActivityById(activityId);
+        if (!activity) {
+            console.error('Activity not found');
+            return;
+        }
+
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="modal-dialog" style="max-width: 400px;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Confirm Delete</h2>
+                        <button class="modal-close">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this activity?</p>
+                        <div style="background: rgba(245, 101, 101, 0.1); border-left: 3px solid var(--danger); padding: 12px; margin: 16px 0; border-radius: 4px;">
+                            <strong>"${Utils.escapeHtml(activity.activity)}"</strong><br>
+                            <small>${Utils.formatDate(activity.date)} ${activity.startTime ? 'at ' + Utils.formatTime(activity.startTime) : ''}</small>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 14px;">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary modal-cancel">Cancel</button>
+                        <button class="btn btn-danger modal-confirm">Delete Activity</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalOverlay);
+
+        // Setup event listeners
+        const closeModal = () => modalOverlay.remove();
+        modalOverlay.querySelector('.modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.modal-cancel').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.modal-confirm').addEventListener('click', () => {
+            this.confirmDelete(activityId);
+            closeModal();
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        setTimeout(() => modalOverlay.classList.add('active'), 10);
+    }
+
+    confirmDelete(activityId) {
+        try {
+            window.app.dataManager.deleteActivity(activityId);
+            this.expandedCards.delete(activityId);
+            this.persistentlyExpanded.delete(activityId);
+        } catch (error) {
+            console.error('Error deleting activity:', error);
+        }
+    }
+
+    handleDuplicateActivity(activityId) {
+        try {
+            const newActivity = window.app.dataManager.duplicateActivity(activityId);
+
+            // Refresh the entire view to show the new activity
+            setTimeout(() => {
+                window.app.updateCurrentView();
+            }, 100);
+
+        } catch (error) {
+            console.error('Error duplicating activity:', error);
+        }
+    }
+
+    updateCardState(activityId) {
+        const card = document.querySelector(`[data-activity-id="${activityId}"]`);
+        if (!card) return;
+
+        const isExpanded = this.expandedCards.has(activityId) || this.persistentlyExpanded.has(activityId);
+        const isHovered = this.expandedCards.has(activityId) && !this.persistentlyExpanded.has(activityId);
+        const isPersistent = this.persistentlyExpanded.has(activityId);
+        const expandedContent = card.querySelector('.activity-expanded-content');
+
+        // Update classes
+        card.classList.toggle('expanded', isExpanded);
+        card.classList.toggle('hovered', isHovered);
+        card.classList.toggle('selected', isPersistent);
+
+        if (expandedContent) {
+            expandedContent.classList.toggle('visible', isExpanded);
+            expandedContent.classList.toggle('hidden', !isExpanded);
+        }
+    }
+
+    toggleCard(activityId) {
+        this.handleCardClick(activityId);
     }
 }
 
-// Timeline View (similar enhancements)
+// Timeline View (unchanged)
 export class TimelineView {
     constructor(dataManager) {
         this.dataManager = dataManager;
@@ -772,14 +839,12 @@ export class TimelineView {
     renderCompleteDetails(activity) {
         return `
             <div class="complete-details-grid">
-                <!-- Activity Name -->
                 <div class="detail-row full-width">
                     <div class="detail-icon">🎯</div>
                     <div class="detail-label">Activity:</div>
                     <div class="detail-value activity-name-detail">${Utils.escapeHtml(activity.activity)}</div>
                 </div>
 
-                <!-- Date & Time -->
                 <div class="detail-row">
                     <div class="detail-icon">📅</div>
                     <div class="detail-label">Date:</div>
@@ -798,7 +863,6 @@ export class TimelineView {
                     <div class="detail-value">${activity.endTime ? Utils.formatTime(activity.endTime) : 'Not specified'}</div>
                 </div>
 
-                <!-- Locations -->
                 ${activity.startFrom || activity.reachTo ? `
                     <div class="timeline-location">
                         <div class="location-icon">🗺️</div>
@@ -809,7 +873,6 @@ export class TimelineView {
                     </div>
                 ` : ''}
 
-                <!-- Transport -->
                 ${activity.transportMode ? `
                 <div class="detail-row">
                     <div class="detail-icon">${Utils.getTransportIcon(activity.transportMode)}</div>
@@ -818,7 +881,6 @@ export class TimelineView {
                 </div>
                 ` : ''}
 
-                <!-- Booking Required -->
                 <div class="detail-row">
                     <div class="detail-icon">${activity.isBooked() ? '✅' : '❌'}</div>
                     <div class="detail-label">Booking Required:</div>
@@ -827,7 +889,6 @@ export class TimelineView {
                     </div>
                 </div>
 
-                <!-- Booking Details (if booked) -->
                 ${activity.isBooked() && activity.accommodationDetails ? `
                 <div class="detail-row full-width">
                     <div class="detail-icon">📋</div>
@@ -836,7 +897,6 @@ export class TimelineView {
                 </div>
                 ` : ''}
 
-                <!-- Cost -->
                 ${activity.cost > 0 ? `
                 <div class="detail-row">
                     <div class="detail-icon">💰</div>
@@ -845,7 +905,6 @@ export class TimelineView {
                 </div>
                 ` : ''}
 
-                <!-- Duration -->
                 ${activity.getDuration() ? `
                 <div class="detail-row">
                     <div class="detail-icon">⏱️</div>
@@ -854,7 +913,6 @@ export class TimelineView {
                 </div>
                 ` : ''}
 
-                <!-- Notes -->
                 ${activity.additionalDetails ? `
                 <div class="detail-row full-width notes-section">
                     <div class="detail-icon">📝</div>
@@ -887,14 +945,18 @@ export class TimelineView {
     }
 }
 
-// Global function to handle card toggling
+// Global handlers for card toggling
 window.toggleActivityCard = function(activityId, viewType) {
     if (!window.app) return;
 
     const view = window.app.views.get(window.app.currentView);
     if (view && view.toggleCard) {
         view.toggleCard(activityId);
-        // Re-render the current view to show/hide expanded state
         window.app.navigateToView(window.app.currentView);
     }
 };
+
+// Initialize enhanced itinerary view
+export function initializeItineraryView(view) {
+    window.itineraryView = view;
+}
